@@ -24,7 +24,6 @@ export default function Navbar() {
 
   // 🎯 ফিক্স: রেন্ডার ট্রিপ এড়াতে এবং হাইড্রেশন এরর রুখতে সেফ সিঙ্ক মেকানিজম
   useEffect(() => {
-    // ব্রাউজার মাউন্ট হওয়ার জন্য একটি ফ্রেম ডিলে ব্যবহার করা হলো
     const timer = setTimeout(() => {
       setMounted(true);
     }, 0);
@@ -43,14 +42,18 @@ export default function Navbar() {
     };
   }, []);
 
+  // রুট বা ক্যাটাগরি চেঞ্জ হলে মোবাইল ড্রয়ার বন্ধ করার জন্য
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname, searchParams]);
+
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
   const isShopAllActive = pathname === "/shop" && !currentCat && !currentFilter;
 
   return (
     <div className="w-full sticky top-0 z-50 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
       
-      {/* 👑 Luxury Top Announcement Bar (এখন সম্পূর্ণ সেফ ও ডাইনামিক) */}
-      {/* ✨ FREE SHIPPING ON ORDERS OVER ৳২০০০ | USE CODE: RATRI10 */}
+      {/* 👑 Luxury Top Announcement Bar */}
       {mounted && announcement.show && announcement.text && (
         <div className="bg-[#141211] text-stone-400 text-[10px] tracking-[0.25em] uppercase py-2.5 text-center font-medium border-b border-stone-900 transition-all duration-300">
           <div dangerouslySetInnerHTML={{ __html: announcement.text }} />
@@ -62,6 +65,23 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             
+            {/* Mobile Hamburger Trigger (শুধু মোবাইলে দেখাবে) */}
+            <div className="flex md:hidden">
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="text-stone-300 hover:text-amber-400 focus:outline-none transition-colors p-2"
+                aria-label="Toggle Menu"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  {isOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </button>
+            </div>
+
             {/* Logo */}
             <div className="shrink-0">
               <Link href="/" className="group flex flex-col">
@@ -74,7 +94,7 @@ export default function Navbar() {
               </Link>
             </div>
 
-            {/* Desktop Links */}
+            {/* Desktop Links (ডেস্কটপে দেখাবে, মোবাইলে হাইড থাকবে) */}
             <div className="hidden md:flex items-center space-x-7 text-[12px] font-bold tracking-wider uppercase">
               
               <Link href="/shop" className={`transition-all duration-200 relative py-2 group ${isShopAllActive ? 'text-amber-400' : 'text-stone-400 hover:text-white'}`}>
@@ -104,8 +124,8 @@ export default function Navbar() {
 
             </div>
 
-            {/* Right Icons with Hydration-Safe Badge Count */}
-            <div className="hidden md:flex items-center space-x-4 text-stone-300">
+            {/* Right Icons with Hydration-Safe Badge Count (মোবাইল ও ডেক্সটপ উভয় মোডেই ভিজিবল) */}
+            <div className="flex items-center space-x-2 md:space-x-4 text-stone-300">
               <Link href="/cart" className="relative p-2 hover:bg-stone-900 rounded-full transition-all duration-200 flex items-center justify-center group hover:text-amber-400">
                 <svg className="w-5 h-5 text-stone-200 group-hover:scale-105 transition-transform" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -115,6 +135,35 @@ export default function Navbar() {
                 </span>
               </Link>
             </div>
+
+          </div>
+        </div>
+
+        {/* 📱 Mobile Luxury Drawer Canvas Menu */}
+        <div className={`md:hidden fixed inset-x-0 top-20 bg-[#0B0A09]/95 backdrop-blur-2xl border-b border-stone-900 transition-all duration-300 origin-top overflow-hidden ${
+          isOpen ? "max-h-screen opacity-100 py-6" : "max-h-0 opacity-0 py-0"
+        }`}>
+          <div className="flex flex-col space-y-4 px-6 text-sm font-bold tracking-widest uppercase">
+            
+            <Link href="/shop" className={`py-2 transition-colors ${isShopAllActive ? 'text-amber-400' : 'text-stone-400'}`}>
+              Shop All
+            </Link>
+
+            <Link href="/shop?filter=new" className={`py-2 transition-colors ${currentFilter === 'new' ? 'text-amber-400' : 'text-stone-400'}`}>
+              New In ⚡
+            </Link>
+
+            <Link href="/shop?cat=three-piece" className={`py-2 transition-colors ${currentCat === 'three-piece' ? 'text-amber-400' : 'text-stone-400'}`}>
+              Three-Piece
+            </Link>
+
+            <Link href="/shop?cat=lungi" className={`py-2 transition-colors ${currentCat === 'lungi' ? 'text-amber-400' : 'text-stone-400'}`}>
+              Lungi
+            </Link>
+
+            <Link href="/shop?cat=cosmetics" className={`py-2 transition-colors ${currentCat === 'cosmetics' ? 'text-amber-400' : 'text-stone-400'}`}>
+              Cosmetics
+            </Link>
 
           </div>
         </div>
