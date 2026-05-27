@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import dynamic from 'next/dynamic'; // 🎯 নতুন ট্রেন্ডি হাইড্রেশন ফিক্স
 import { useCart } from '@/context/CartContext'; // গ্লোবাল কার্ট ডাটা ইমপোর্ট করলাম
 
-export default function CartPage() {
+function CartPageContent() {
   const { cart, updateQuantity, removeFromCart } = useCart();
 
   // কার্টের সব প্রোডাক্টের মোট মূল্য হিসাব করার লজিক
@@ -106,3 +107,13 @@ export default function CartPage() {
     </div>
   );
 }
+
+// 🎯 ৩. মেইন সেফ গেটওয়ে এক্সপোর্ট: এটি ক্লায়েন্ট সাইড রেন্ডার নিশ্চিত করবে এবং Cascading Render এরর পুরোপুরি ফিক্স করবে।
+export default dynamic(() => Promise.resolve(CartPageContent), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-screen bg-[#0B0A09] flex items-center justify-center">
+      <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+});

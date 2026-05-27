@@ -23,12 +23,9 @@ export default function ProductManager() {
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] =
-    useState(false);
-  const [bulkUploading, setBulkUploading] =
-    useState(false);
-  const [editingId, setEditingId] =
-    useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   const initialFormData = {
     name: "",
@@ -39,50 +36,31 @@ export default function ProductManager() {
     badge: "",
     isNewArrival: false,
     isFeaturedBanner: false,
+    isOffer: false,
   };
 
-  const [formData, setFormData] =
-    useState(initialFormData);
+  const [formData, setFormData] = useState(initialFormData);
 
   // ☁️ Live Product Fetch
   useEffect(() => {
-    const q = query(
-      collection(db, "products"),
-      orderBy("createdAt", "desc")
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const liveProducts = snapshot.docs.map(
-          (doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          })
-        );
-
-        setProducts(liveProducts);
-      }
-    );
-
+    const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const liveProducts = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setProducts(liveProducts);
+    });
     return () => unsubscribe();
   }, []);
 
   // 🔄 Input Change
   const handleInputChange = (e) => {
-    const {
-      name,
-      value,
-      type,
-      checked,
-    } = e.target;
+    const { name, value, type, checked } = e.target;
 
     setFormData((prev) => ({
       ...prev,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -99,10 +77,7 @@ export default function ProductManager() {
 
       data.append("file", file);
 
-      data.append(
-        "upload_preset",
-        "product_upload"
-      );
+      data.append("upload_preset", "product_upload");
 
       const cloudName = "dwrhdbdt6";
 
@@ -111,11 +86,10 @@ export default function ProductManager() {
         {
           method: "POST",
           body: data,
-        }
+        },
       );
 
-      const resData =
-        await response.json();
+      const resData = await response.json();
 
       if (resData.secure_url) {
         setFormData((prev) => ({
@@ -123,26 +97,14 @@ export default function ProductManager() {
           image: resData.secure_url,
         }));
 
-        showAlert(
-          "📸 Image uploaded successfully to cloud node!",
-          "success"
-        );
+        showAlert("📸 Image uploaded successfully to cloud node!", "success");
       } else {
-        throw new Error(
-          resData.error?.message ||
-            "Upload failed"
-        );
+        throw new Error(resData.error?.message || "Upload failed");
       }
     } catch (error) {
-      console.error(
-        "Cloudinary upload error:",
-        error
-      );
+      console.error("Cloudinary upload error:", error);
 
-      showAlert(
-        `Failed to upload image: ${error.message}`,
-        "error"
-      );
+      showAlert(`Failed to upload image: ${error.message}`, "error");
     } finally {
       setUploadingImage(false);
     }
@@ -153,24 +115,18 @@ export default function ProductManager() {
     e.preventDefault();
 
     if (!formData.image.trim()) {
-      showAlert(
-        "Please upload a product media asset image first.",
-        "error"
-      );
+      showAlert("Please upload a product media asset image first.", "error");
 
       return;
     }
 
     if (formData.isFeaturedBanner) {
-      const hasExistingBanner =
-        products.some(
-          (p) => p.isFeaturedBanner
-        );
+      const hasExistingBanner = products.some((p) => p.isFeaturedBanner);
 
       if (hasExistingBanner) {
         showAlert(
           "⚠️ একটি Featured Banner অলরেডি সচল আছে! প্রথমে সেটি ক্লিয়ার করুন।",
-          "error"
+          "error",
         );
 
         return;
@@ -180,52 +136,33 @@ export default function ProductManager() {
     try {
       setLoading(true);
 
-      await addDoc(
-        collection(db, "products"),
-        {
-          name: formData.name,
-          price: Number(
-            formData.price
-          ),
-          category:
-            formData.category,
-          image: formData.image,
-          inStock:
-            formData.inStock,
-          badge:
-            formData.badge ||
-            "New",
-          isNewArrival:
-            formData.isNewArrival,
-          isFeaturedBanner:
-            formData.isFeaturedBanner,
-          createdAt:
-            new Date().toISOString(),
-        }
-      );
+      await addDoc(collection(db, "products"), {
+        name: formData.name,
+        price: Number(formData.price),
+        category: formData.category,
+        image: formData.image,
+        inStock: formData.inStock,
+        badge: formData.badge || "New",
+        isNewArrival: formData.isNewArrival,
+        isFeaturedBanner: formData.isFeaturedBanner,
+        isOffer: Boolean(formData.isOffer),
+        createdAt: new Date().toISOString(),
+      });
 
-      showAlert(
-        "🎉 Product Deployed and Published Successfully!",
-        "success"
-      );
+      showAlert("🎉 Product Deployed and Published Successfully!", "success");
 
       setFormData(initialFormData);
     } catch (error) {
       console.error(error);
 
-      showAlert(
-        `Deployment Error: ${error.message}`,
-        "error"
-      );
+      showAlert(`Deployment Error: ${error.message}`, "error");
     } finally {
       setLoading(false);
     }
   };
 
   // 📊 Excel Upload
-  const handleBulkExcelUpload = async (
-    e
-  ) => {
+  const handleBulkExcelUpload = async (e) => {
     const file = e.target.files[0];
 
     if (!file) return;
@@ -233,79 +170,49 @@ export default function ProductManager() {
     try {
       setBulkUploading(true);
 
-      const data =
-        await file.arrayBuffer();
+      const data = await file.arrayBuffer();
 
-      const workbook = XLSX.read(
-        data
-      );
+      const workbook = XLSX.read(data);
 
-      const worksheet =
-        workbook.Sheets[
-          workbook.SheetNames[0]
-        ];
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
 
-      const jsonData =
-        XLSX.utils.sheet_to_json(
-          worksheet
-        );
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
       let successCount = 0;
 
       for (const row of jsonData) {
         if (row.name && row.price) {
-          await addDoc(
-            collection(db, "products"),
-            {
-              name: String(row.name),
-              price: Number(
-                row.price
-              ),
-              category: String(
-                row.category ||
-                  "three-piece"
-              ).toLowerCase(),
+          await addDoc(collection(db, "products"), {
+            name: String(row.name),
+            price: Number(row.price),
+            category: String(row.category || "three-piece").toLowerCase(),
 
-              image: String(
-                row.image ||
-                  "https://placehold.co/600x600"
-              ),
+            image: String(row.image || "https://placehold.co/600x600"),
 
-              badge: String(
-                row.badge || "New"
-              ),
+            badge: String(row.badge || "New"),
 
-              inStock:
-                row.inStock ===
-                undefined
-                  ? true
-                  : String(
-                      row.inStock
-                    ).toLowerCase() ===
-                    "true",
+            inStock:
+              row.inStock === undefined
+                ? true
+                : String(row.inStock).toLowerCase() === "true",
 
-              isNewArrival:
-                row.isNewArrival ===
-                undefined
-                  ? false
-                  : String(
-                      row.isNewArrival
-                    ).toLowerCase() ===
-                    "true",
+            isNewArrival:
+              row.isNewArrival === undefined
+                ? false
+                : String(row.isNewArrival).toLowerCase() === "true",
 
-              isFeaturedBanner:
-                row.isFeaturedBanner ===
-                undefined
-                  ? false
-                  : String(
-                      row.isFeaturedBanner
-                    ).toLowerCase() ===
-                    "true",
+            isFeaturedBanner:
+              row.isFeaturedBanner === undefined
+                ? false
+                : String(row.isFeaturedBanner).toLowerCase() === "true",
 
-              createdAt:
-                new Date().toISOString(),
-            }
-          );
+            isOffer:
+              row.isOffer === undefined
+                ? false
+                : String(row.isOffer).toLowerCase() === "true",
+
+            createdAt: new Date().toISOString(),
+          });
 
           successCount++;
         }
@@ -313,17 +220,14 @@ export default function ProductManager() {
 
       showAlert(
         `📊 Bulk Sync Complete! ${successCount} products mapped into database ledger.`,
-        "success"
+        "success",
       );
     } catch (error) {
-      console.error(
-        "Excel Error:",
-        error
-      );
+      console.error("Excel Error:", error);
 
       showAlert(
         "Failed to parse and upload excel spreadsheet matrix.",
-        "error"
+        "error",
       );
     } finally {
       setBulkUploading(false);
@@ -333,217 +237,168 @@ export default function ProductManager() {
   };
 
   // ❌ Delete
-  const handleDelete = async (
-    productId
-  ) => {
-    const confirmDelete =
-      window.confirm(
-        "Are you absolute sure to delete this piece from vault?"
-      );
+  const handleDelete = async (productId) => {
+    const confirmDelete = window.confirm(
+      "Are you absolute sure to delete this piece from vault?",
+    );
 
     if (!confirmDelete) return;
 
     try {
-      await deleteDoc(
-        doc(db, "products", productId)
-      );
+      await deleteDoc(doc(db, "products", productId));
 
-      showAlert(
-        "🗑️ Product permanent deleted from catalog.",
-        "success"
-      );
+      showAlert("🗑️ Product permanent deleted from catalog.", "success");
     } catch (error) {
-      showAlert(
-        `Deletion Fault: ${error.message}`,
-        "error"
-      );
+      showAlert(`Deletion Fault: ${error.message}`, "error");
     }
   };
 
   // 🔄 Stock Toggle
-  const toggleStock = async (
-    productId,
-    currentStatus
-  ) => {
+  const toggleStock = async (productId, currentStatus) => {
     try {
-      await updateDoc(
-        doc(db, "products", productId),
-        {
-          inStock: !currentStatus,
-        }
-      );
+      await updateDoc(doc(db, "products", productId), {
+        inStock: !currentStatus,
+      });
 
       showAlert(
-        `Stock node updated to ${
-          !currentStatus
-            ? "In Stock"
-            : "Out of Stock"
-        }`,
-        "success"
+        `Stock node updated to ${!currentStatus ? "In Stock" : "Out of Stock"}`,
+        "success",
       );
     } catch (error) {
-      showAlert(
-        "Failed to update warehouse stock metric.",
-        "error"
-      );
+      showAlert("Failed to update warehouse stock metric.", "error");
     }
   };
 
   // ⭐ Banner Toggle
-  const toggleFeaturedBanner =
-    async (
-      productId,
-      currentStatus
-    ) => {
-      if (!currentStatus) {
-        const hasExistingBanner =
-          products.some(
-            (p) =>
-              p.isFeaturedBanner &&
-              p.id !== productId
-          );
+  const toggleFeaturedBanner = async (productId, currentStatus) => {
+    if (!currentStatus) {
+      const hasExistingBanner = products.some(
+        (p) => p.isFeaturedBanner && p.id !== productId,
+      );
 
-        if (hasExistingBanner) {
-          showAlert(
-            "⚠️ একটি Featured Banner অলরেডি সচল আছে! প্রথমে সেটি রিমুভ করুন।",
-            "error"
-          );
-
-          return;
-        }
-      }
-
-      try {
-        await updateDoc(
-          doc(db, "products", productId),
-          {
-            isFeaturedBanner:
-              !currentStatus,
-          }
-        );
-
+      if (hasExistingBanner) {
         showAlert(
-          currentStatus
-            ? "🛑 Master Showcase Banner Disabled Successfully!"
-            : "✨ Node deployed to Live Main Featured Hero Banner Stage!",
-          "success"
+          "⚠️ একটি Featured Banner অলরেডি সচল আছে! প্রথমে সেটি রিমুভ করুন।",
+          "error",
         );
-      } catch (error) {
-        showAlert(
-          `Error configuring banner stage: ${error.message}`,
-          "error"
-        );
+
+        return;
       }
-    };
+    }
+
+    try {
+      await updateDoc(doc(db, "products", productId), {
+        isFeaturedBanner: !currentStatus,
+      });
+
+      showAlert(
+        currentStatus
+          ? "🛑 Master Showcase Banner Disabled Successfully!"
+          : "✨ Node deployed to Live Main Featured Hero Banner Stage!",
+        "success",
+      );
+    } catch (error) {
+      showAlert(`Error configuring banner stage: ${error.message}`, "error");
+    }
+  };
 
   // ✏️ Edit Click
-  const handleEditClick = (
-    product
-  ) => {
+  const handleEditClick = (product) => {
     setEditingId(product.id);
-
     setFormData({
       name: product.name,
       price: product.price,
       category: product.category,
       image: product.image,
-      inStock:
-        product.inStock ?? true,
+      inStock: product.inStock ?? true,
       badge: product.badge || "",
-      isNewArrival:
-        product.isNewArrival ??
-        false,
-      isFeaturedBanner:
-        product.isFeaturedBanner ??
-        false,
+      isNewArrival: product.isNewArrival ?? false,
+      isFeaturedBanner: product.isFeaturedBanner ?? false,
+      isOffer: product.isOffer ?? false,
     });
 
-    window.scrollTo({
+     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
   };
+   // 👈 handleEditClick এখানে শেষ হয়েছে
+
+  // 🎯 নতুন লজিক: টেবিল থেকে অফার সরাসরি অন/অফ করার ফাংশন
+  const toggleOfferStatus = async (productId, currentStatus) => {
+    try {
+      await updateDoc(doc(db, "products", productId), {
+        isOffer: !currentStatus,
+      });
+      showAlert(
+        `🏷️ Offer status successfully updated to [${!currentStatus ? "ACTIVE" : "DISABLED"}].`,
+        "success",
+      );
+    } catch (error) {
+      showAlert("Failed to sync offer metrics to database ledger.", "error");
+    }
+  };
 
   // 🔄 Update Submit
-  const handleUpdateSubmit =
-    async (e) => {
-      e.preventDefault();
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
 
-      if (!formData.image) {
+    if (!formData.image) {
+      showAlert("Please upload a product asset image node first.", "error");
+
+      return;
+    }
+
+    if (formData.isFeaturedBanner) {
+      const hasExistingBanner = products.some(
+        (p) => p.isFeaturedBanner && p.id !== editingId,
+      );
+
+      if (hasExistingBanner) {
         showAlert(
-          "Please upload a product asset image node first.",
-          "error"
+          "⚠️ একটি Featured Banner অলরেডি সচল আছে! দয়া করে সেটি বন্ধ করে সাবমিট করুন।",
+          "error",
         );
 
         return;
       }
+    }
 
-      if (
-        formData.isFeaturedBanner
-      ) {
-        const hasExistingBanner =
-          products.some(
-            (p) =>
-              p.isFeaturedBanner &&
-              p.id !== editingId
-          );
+    try {
+      setLoading(true);
 
-        if (hasExistingBanner) {
-          showAlert(
-            "⚠️ একটি Featured Banner অলরেডি সচল আছে! দয়া করে সেটি বন্ধ করে সাবমিট করুন।",
-            "error"
-          );
+      const productData = {
+        name: formData.name || "",
+        price: Number(formData.price) || 0,
+        category: formData.category || "three-piece",
+        image: formData.image || "",
+        inStock: Boolean(formData.inStock),
+        badge: formData.badge || "New",
+        isNewArrival: Boolean(formData.isNewArrival),
+        isFeaturedBanner: Boolean(formData.isFeaturedBanner),
+        isOffer: Boolean(formData.isOffer), // সেভ করার সময় সেফ বুলিয়ান কনভার্সন
+        createdAt: new Date().toISOString(),
+      };
 
-          return;
-        }
+      if (editingId) {
+        // 🎯 যদি এডিট মোড অন থাকে তবে আপডেট হবে
+        await updateDoc(doc(db, "products", editingId), productData);
+        showAlert("🎉 Product Configuration Updated Successfully!", "success");
+        setEditingId(null); // এডিট মোড ক্লিয়ার
+      } else {
+        // 🎯 না হলে নতুন প্রোডাক্ট হিসেবে অ্যাড হবে
+        await addDoc(collection(db, "products"), productData);
+        showAlert("🎉 Product Deployed and Published Successfully!", "success");
       }
 
-      try {
-        setLoading(true);
-
-        await updateDoc(
-          doc(
-            db,
-            "products",
-            editingId
-          ),
-          {
-            name: formData.name,
-            price: Number(
-              formData.price
-            ),
-            category:
-              formData.category,
-            image: formData.image,
-            inStock:
-              formData.inStock,
-            badge:
-              formData.badge ||
-              "New",
-            isNewArrival:
-              formData.isNewArrival,
-            isFeaturedBanner:
-              formData.isFeaturedBanner,
-          }
-        );
-
-        showAlert(
-          "✨ Product Asset Specs Synchronized Successfully!",
-          "success"
-        );
-
-        setEditingId(null);
-
-        setFormData(initialFormData);
-      } catch (error) {
-        showAlert(
-          `Sync Updates Interrupted: ${error.message}`,
-          "error"
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+      setFormData(initialFormData);
+    } catch (error) {
+      console.error(error);
+      showAlert(`Deployment Error: ${error.message}`, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#060504] text-zinc-100 lg:pl-64 antialiased">
@@ -557,22 +412,17 @@ export default function ProductManager() {
             </h1>
 
             <p className="text-xs text-zinc-500 tracking-wider mt-1">
-              Connected Live with Firebase
-              Cloud.
+              Connected Live with Firebase Cloud.
             </p>
           </div>
 
           <label className="cursor-pointer text-xs uppercase tracking-widest bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 py-2.5 px-4 rounded transition active:scale-95">
-            {bulkUploading
-              ? "Uploading Sync..."
-              : "Import Excel Matrix"}
+            {bulkUploading ? "Uploading Sync..." : "Import Excel Matrix"}
 
             <input
               type="file"
               accept=".xlsx, .xls"
-              onChange={
-                handleBulkExcelUpload
-              }
+              onChange={handleBulkExcelUpload}
               className="hidden"
               disabled={bulkUploading}
             />
@@ -583,18 +433,12 @@ export default function ProductManager() {
         <div className="grid grid-cols-1 gap-10">
           <div className="bg-[#0B0A09] border border-[#1C1A17] p-6 sm:p-8 rounded h-fit">
             <h2 className="text-sm uppercase tracking-widest text-zinc-400 font-semibold mb-6 border-b border-zinc-900 pb-2">
-              {editingId
-                ? "✨ Edit Asset Metrics"
-                : "➕ Product Entry System"}
+              {editingId ? "✨ Edit Asset Metrics" : "➕ Product Entry System"}
             </h2>
 
             <form
               className="space-y-4"
-              onSubmit={
-                editingId
-                  ? handleUpdateSubmit
-                  : handleSubmit
-              }
+              onSubmit={editingId ? handleUpdateSubmit : handleSubmit}
             >
               {/* NAME */}
               <div>
@@ -606,9 +450,7 @@ export default function ProductManager() {
                   type="text"
                   name="name"
                   value={formData.name}
-                  onChange={
-                    handleInputChange
-                  }
+                  onChange={handleInputChange}
                   required
                   placeholder="Enter product name..."
                   className="w-full bg-[#12110F] border border-zinc-800 rounded p-3 text-zinc-200"
@@ -626,9 +468,7 @@ export default function ProductManager() {
                     type="number"
                     name="price"
                     value={formData.price}
-                    onChange={
-                      handleInputChange
-                    }
+                    onChange={handleInputChange}
                     required
                     className="w-full bg-[#12110F] border border-zinc-800 rounded p-3 text-zinc-200"
                   />
@@ -642,26 +482,16 @@ export default function ProductManager() {
                   <select
                     name="category"
                     value={formData.category}
-                    onChange={
-                      handleInputChange
-                    }
+                    onChange={handleInputChange}
                     className="w-full bg-[#12110F] border border-zinc-800 rounded p-3 text-zinc-200"
                   >
-                    <option value="three-piece">
-                      Three-Piece
-                    </option>
+                    <option value="three-piece">Three-Piece</option>
 
-                    <option value="kurti">
-                      Kurti
-                    </option>
+                    <option value="kurti">Kurti</option>
 
-                    <option value="saree">
-                      Saree
-                    </option>
+                    <option value="saree">Saree</option>
 
-                    <option value="unstitched">
-                      Unstitched
-                    </option>
+                    <option value="unstitched">Unstitched</option>
                   </select>
                 </div>
               </div>
@@ -676,9 +506,7 @@ export default function ProductManager() {
                   type="text"
                   name="badge"
                   value={formData.badge}
-                  onChange={
-                    handleInputChange
-                  }
+                  onChange={handleInputChange}
                   placeholder="New / Hot"
                   className="w-full bg-[#12110F] border border-zinc-800 rounded p-3 text-zinc-200"
                 />
@@ -701,19 +529,14 @@ export default function ProductManager() {
                     <button
                       type="button"
                       onClick={() =>
-                        setFormData(
-                          (
-                            prev
-                          ) => ({
-                            ...prev,
-                            image: "",
-                          })
-                        )
+                        setFormData((prev) => ({
+                          ...prev,
+                          image: "",
+                        }))
                       }
                       className="text-[11px] uppercase tracking-wider text-red-400 hover:underline"
                     >
-                      Purge & Map New
-                      Image Asset
+                      Purge & Map New Image Asset
                     </button>
                   </div>
                 ) : (
@@ -727,9 +550,7 @@ export default function ProductManager() {
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={
-                        handleImageFileChange
-                      }
+                      onChange={handleImageFileChange}
                       className="hidden"
                     />
                   </label>
@@ -742,12 +563,8 @@ export default function ProductManager() {
                   <input
                     type="checkbox"
                     name="inStock"
-                    checked={
-                      formData.inStock
-                    }
-                    onChange={
-                      handleInputChange
-                    }
+                    checked={formData.inStock}
+                    onChange={handleInputChange}
                   />
                   Available In Stock
                 </label>
@@ -756,30 +573,31 @@ export default function ProductManager() {
                   <input
                     type="checkbox"
                     name="isNewArrival"
-                    checked={
-                      formData.isNewArrival
-                    }
-                    onChange={
-                      handleInputChange
-                    }
+                    checked={formData.isNewArrival}
+                    onChange={handleInputChange}
                   />
-                  Mark New Collection
-                  Pipeline
+                  Mark New Collection Pipeline
                 </label>
 
                 <label className="flex items-center gap-3 text-sm text-zinc-300">
                   <input
                     type="checkbox"
                     name="isFeaturedBanner"
-                    checked={
-                      formData.isFeaturedBanner
-                    }
-                    onChange={
-                      handleInputChange
-                    }
+                    checked={formData.isFeaturedBanner}
+                    onChange={handleInputChange}
                   />
-                  Deploy as Master Hero
-                  Feature Showcase
+                  Deploy as Master Hero Feature Showcase
+                </label>
+
+                <label className="flex items-center space-x-3 text-xs uppercase tracking-wider text-stone-400 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="isOffer"
+                    checked={formData.isOffer}
+                    onChange={handleInputChange}
+                    className="accent-amber-500 h-4 w-4 rounded border-stone-800 bg-stone-950"
+                  />
+                  <span>Mark as Special Offer Product</span>
                 </label>
               </div>
 
@@ -787,30 +605,23 @@ export default function ProductManager() {
               <div className="flex gap-3">
                 <button
                   type="submit"
-                  disabled={
-                    loading ||
-                    uploadingImage
-                  }
+                  disabled={loading || uploadingImage}
                   className="flex-1 text-center bg-zinc-100 hover:bg-zinc-200 text-black font-semibold py-3.5 rounded text-xs uppercase tracking-widest transition active:scale-[0.99] disabled:opacity-40"
                 >
                   {loading
                     ? "Processing Sync Node..."
                     : editingId
-                    ? "Save Catalog Updates"
-                    : "Deploy Component Item"}
+                      ? "Save Catalog Updates"
+                      : "Deploy Component Item"}
                 </button>
 
                 {editingId && (
                   <button
                     type="button"
                     onClick={() => {
-                      setEditingId(
-                        null
-                      );
+                      setEditingId(null);
 
-                      setFormData(
-                        initialFormData
-                      );
+                      setFormData(initialFormData);
                     }}
                     className="bg-zinc-900 border border-zinc-800 text-zinc-400 px-5 rounded text-xs uppercase tracking-wider hover:bg-zinc-800"
                   >
@@ -824,37 +635,28 @@ export default function ProductManager() {
           {/* PRODUCTS */}
           <div>
             <h2 className="text-sm uppercase tracking-widest text-zinc-400 font-semibold mb-6">
-              Live Vault Registry Data (
-              {products.length} Units Map)
+              Live Vault Registry Data ({products.length} Units Map)
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {products.length === 0 ? (
                 <div className="text-zinc-500 text-sm">
-                  No core items recorded
-                  inside live asset
-                  registry node.
+                  No core items recorded inside live asset registry node.
                 </div>
               ) : (
                 products.map((product) => (
                   <div
                     key={product.id}
                     className={`bg-[#0B0A09] border ${
-                      editingId ===
-                      product.id
+                      editingId === product.id
                         ? "border-zinc-400 ring-1 ring-zinc-400"
                         : "border-[#1C1A17]"
                     } rounded-2xl p-4 relative overflow-hidden backdrop-blur-md transition active:scale-[0.99]`}
                   >
                     <div className="relative w-full h-64 rounded-xl overflow-hidden mb-4">
                       <img
-                        src={
-                          product.image ||
-                          "https://placehold.co/600x600"
-                        }
-                        alt={
-                          product.name
-                        }
+                        src={product.image || "https://placehold.co/600x600"}
+                        alt={product.name}
                         className="w-full h-full object-cover"
                       />
 
@@ -863,21 +665,22 @@ export default function ProductManager() {
                           SOLD OUT
                         </div>
                       )}
+                      {product.isOffer && (
+                        <span className="text-[9px] bg-rose-950 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase ml-2 animate-pulse">
+                          🏷️ Offer Active
+                        </span>
+                      )}
                     </div>
 
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs uppercase text-zinc-500">
-                          {
-                            product.category
-                          }
+                          {product.category}
                         </span>
 
                         {product.badge && (
                           <span className="text-[10px] bg-zinc-800 text-zinc-300 px-2 py-1 rounded">
-                            {
-                              product.badge
-                            }
+                            {product.badge}
                           </span>
                         )}
 
@@ -893,70 +696,90 @@ export default function ProductManager() {
                       </h3>
 
                       <p className="text-zinc-300">
-                        ৳
-                        {Number(
-                          product.price
-                        ).toLocaleString()}
+                        ৳{Number(product.price).toLocaleString()}
                       </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 mt-4">
+                    <div className="flex flex-wrap items-center gap-2.5 mt-5">
+                      {/* 📦 STOCK TOGGLE SWITCH */}
                       <button
-                        onClick={() =>
-                          toggleStock(
-                            product.id,
-                            product.inStock
-                          )
-                        }
-                        className={`text-[10px] uppercase font-semibold tracking-wider px-2.5 py-1.5 rounded-lg border transition-all ${
+                        onClick={() => toggleStock(product.id, product.inStock)}
+                        className={`h-9 px-3.5 text-[10px] uppercase font-black tracking-widest rounded border transition-all duration-300 flex items-center justify-center gap-1.5 ${
                           product.inStock
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                            : "bg-zinc-900 text-zinc-500 border-zinc-800"
+                            ? "bg-emerald-500/5 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.02)]"
+                            : "bg-zinc-950 text-zinc-600 border-zinc-900 opacity-60"
                         }`}
                       >
-                        {product.inStock
-                          ? "Active"
-                          : "OOS"}
+                        <span
+                          className={`w-1 h-1 rounded-full ${product.inStock ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"}`}
+                        />
+                        {product.inStock ? "In Stock" : "Stock Out"}
                       </button>
 
+                      {/* 👑 MASTER HERO BANNER TOGGLE */}
                       <button
                         onClick={() =>
                           toggleFeaturedBanner(
                             product.id,
-                            product.isFeaturedBanner
+                            product.isFeaturedBanner,
                           )
                         }
-                        className={`text-[10px] uppercase font-semibold tracking-wider px-2.5 py-1.5 rounded-lg border transition-all ${
+                        className={`h-9 px-3.5 text-[10px] uppercase font-black tracking-widest rounded border transition-all duration-300 ${
                           product.isFeaturedBanner
-                            ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
-                            : "bg-zinc-900 text-zinc-400 border-zinc-800"
+                            ? "bg-amber-500 text-stone-950 border-amber-500 shadow-lg shadow-amber-500/10"
+                            : "bg-[#12110F] text-stone-400 border-zinc-800/80 hover:border-amber-500/50 hover:text-amber-400"
                         }`}
                       >
                         {product.isFeaturedBanner
-                          ? "Remove Banner"
-                          : "Set Banner"}
+                          ? "👑 Active Hero"
+                          : "Set Hero"}
                       </button>
 
+                      {/* 🏷️ PRIVATE SALE SPECIAL OFFER TOGGLE */}
                       <button
+                        type="button"
                         onClick={() =>
-                          handleEditClick(
-                            product
+                          toggleOfferStatus(
+                            product.id,
+                            product.isOffer ?? false,
                           )
                         }
-                        className="p-2 bg-[#12110F] border border-zinc-800 text-zinc-300 hover:text-zinc-100 rounded-xl transition active:scale-90 text-xs"
+                        className={`h-9 px-3.5 text-[10px] uppercase font-black tracking-widest rounded border transition-all duration-300 ${
+                          product.isOffer
+                            ? "bg-rose-950/40 text-rose-400 border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.03)]"
+                            : "bg-[#12110F] text-stone-400 border-zinc-800/80 hover:border-rose-500/50 hover:text-rose-400"
+                        }`}
+                      >
+                        {product.isOffer ? "🏷️ Sale 40%" : "Reg Price"}
+                      </button>
+
+                      {/* ✏️ ASSET METRICS EDIT ACTION */}
+                      <button
+                        onClick={() => handleEditClick(product)}
+                        className="h-9 px-4 bg-[#12110F] border border-zinc-800/80 text-zinc-400 hover:text-white hover:border-zinc-700 text-[10px] uppercase font-black tracking-widest rounded transition-all duration-200 active:scale-95"
                       >
                         Edit
                       </button>
 
+                      {/* ❌ VAULT PURGE DELETE ACTION */}
                       <button
-                        onClick={() =>
-                          handleDelete(
-                            product.id
-                          )
-                        }
-                        className="p-2 bg-[#12110F] border border-red-950/40 text-red-400/80 hover:text-red-400 rounded-xl transition active:scale-90 text-xs"
+                        onClick={() => handleDelete(product.id)}
+                        className="h-9 w-9 bg-zinc-950/40 border border-red-950/50 text-red-500/70 hover:text-red-400 hover:bg-red-950/20 hover:border-red-900/60 rounded transition-all duration-200 active:scale-95 flex items-center justify-center"
+                        title="Delete Asset"
                       >
-                        Delete
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
                       </button>
                     </div>
                   </div>
