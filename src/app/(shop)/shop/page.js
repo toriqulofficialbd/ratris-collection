@@ -1,23 +1,22 @@
 // src/app/(shop)/shop/page.js
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation"; // 🎯 নতুন যুক্ত: URL এর প্যারামিটার চেনার জন্য
+import { useState, useEffect, Suspense } from "react"; // 🎯 প্রোডাকশন বিল্ড ফিক্সের জন্য Suspense যুক্ত করা হলো
+import { useSearchParams } from "next/navigation"; 
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
-import { useCart } from "@/context/CartContext"; // কার্ট হুক
+import { useCart } from "@/context/CartContext"; 
 
-export default function ShopPage() {
+// 🎯 ১. ইন্টারনাল কোর কন্টেন্ট উপাদান (সব অরিজিনাল লজিক ও UI হুবহু এর ভেতর সংরক্ষিত)
+function ShopContent() {
   const { addToCart } = useCart();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 🎯 নতুন যুক্ত: URL থেকে ক্যাটাগরি (?cat=) এবং ফিল্টার (?filter=) ডাটা রিড করা
   const searchParams = useSearchParams();
   const currentCat = searchParams.get("cat"); 
   const currentFilter = searchParams.get("filter");
 
-  // ☁️ ফায়ারবেস থেকে লাইভ রিয়েল-টাইম ডাটা লোড করা
   useEffect(() => {
     const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -31,19 +30,16 @@ export default function ShopPage() {
     return () => unsubscribe();
   }, []);
 
-  // 🎯 নতুন যুক্ত: রেন্ডার টাইমে প্রোডাক্ট ফিল্টার করার লজিক (যা এরর মুক্ত রাখবে)
   let filteredProducts = [...products];
 
-  // যদি Navbar থেকে কোনো ক্যাটাগরি সিলেক্ট করা থাকে
   if (currentCat) {
     filteredProducts = filteredProducts.filter(
       (product) => product.category?.toLowerCase() === currentCat.toLowerCase()
     );
   }
 
-  // যদি Navbar থেকে New In ফিল্টার সিলেক্ট করা থাকে
   if (currentFilter === "new") {
-    filteredProducts = filteredProducts.slice(0, 4); // প্রথম ৪টি নতুন প্রোডাক্ট দেখাবে
+    filteredProducts = filteredProducts.slice(0, 4); 
   }
 
   return (
@@ -53,7 +49,6 @@ export default function ShopPage() {
         {/* EDITORIAL HERO CANVAS HEADER */}
         <header className="mb-16 border-b border-stone-900 pb-8">
           <span className="text-xs font-bold text-amber-500 uppercase tracking-widest">THE VAULT</span>
-          {/* 🎯 নতুন যুক্ত: অল প্রোডাক্টের জায়গায় এখন সিলেক্টেড ক্যাটাগরির নাম ডাইনামিকালি দেখাবে */}
           <h1 className="text-4xl font-serif uppercase tracking-wider text-white mt-1">
             {currentCat ? currentCat.replace('-', ' ') : currentFilter === 'new' ? 'New Arrivals ⚡' : 'All Products'}
           </h1>
@@ -64,13 +59,12 @@ export default function ShopPage() {
           <div className="h-64 flex items-center justify-center">
             <p className="text-xs text-amber-500 uppercase tracking-[0.3em] animate-pulse">Streaming Luxury Vault...</p>
           </div>
-        ) : filteredProducts.length === 0 ? ( // 🎯 নতুন যুক্ত: ফিল্টার করার পর খালি থাকলে এই মেসেজ দেখাবে
+        ) : filteredProducts.length === 0 ? ( 
           <div className="h-64 flex items-center justify-center">
             <p className="text-xs text-stone-500 uppercase tracking-widest font-light">No active pieces currently live in this category.</p>
           </div>
         ) : (
           /* 💎 YOUR ORIGINAL FULL-WIDTH RESPONSIVE 4-COLUMN GRID ARCHITECTURE */
-          /* 🎯 নতুন যুক্ত: products.map এর জায়গায় filteredProducts.map ব্যবহার করা হয়েছে */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {filteredProducts.map((product) => (
               <div key={product.id} className="group flex flex-col bg-[#12110F] border border-stone-900 rounded-xl overflow-hidden shadow-xl justify-between">
@@ -130,5 +124,18 @@ export default function ShopPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// 🎯 ২. মেইন রুট এক্সপোর্ট (প্রোডাকশন বিল্ড সাকসেস করার সিকিউর সাসপেন্স গেটওয়ে)
+export default function ShopPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0B0A09] flex items-center justify-center">
+        <p className="text-xs text-amber-500 uppercase tracking-[0.3em] animate-pulse">Streaming Luxury Vault...</p>
+      </div>
+    }>
+      <ShopContent />
+    </Suspense>
   );
 }
