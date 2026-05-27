@@ -22,13 +22,12 @@ export default function Navbar() {
   const currentFilter = searchParams.get("filter");
   const { cart } = useCart(); 
 
-  // 🎯 ফিক্স: রেন্ডার ট্রিপ এড়াতে এবং হাইড্রেশন এরর রুখতে সেফ সিঙ্ক মেকানিজম
+  // 🎯 হাইড্রেশন ফিক্স এবং ফায়ারবেস নোটিশ লাইভ সিঙ্ক
   useEffect(() => {
     const timer = setTimeout(() => {
       setMounted(true);
     }, 0);
 
-    // ফায়ারবেসের settings কালেকশনের notice_bar ডকুমেন্ট থেকে ডাটা লাইভ লিসেন করা হচ্ছে
     const docRef = doc(db, "settings", "notice_bar");
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -41,11 +40,6 @@ export default function Navbar() {
       unsubscribe();
     };
   }, []);
-
-  // রুট বা ক্যাটাগরি চেঞ্জ হলে মোবাইল ড্রয়ার বন্ধ করার জন্য
-  useEffect(() => {
-    setIsOpen(false);
-  }, [pathname, searchParams]);
 
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
   const isShopAllActive = pathname === "/shop" && !currentCat && !currentFilter;
@@ -61,11 +55,11 @@ export default function Navbar() {
       )}
 
       {/* 🪄 Sleek Premium Dark Navbar */}
-      <nav className="bg-[#0B0A09]/90 backdrop-blur-xl border-b border-stone-900/60 transition-all duration-300">
+      <nav className="bg-[#0B0A09]/90 backdrop-blur-xl border-b border-stone-900/60 transition-all duration-300 relative z-50">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             
-            {/* Mobile Hamburger Trigger (শুধু মোবাইলে দেখাবে) */}
+            {/* Mobile Hamburger Trigger */}
             <div className="flex md:hidden">
               <button
                 onClick={() => setIsOpen(!isOpen)}
@@ -94,7 +88,7 @@ export default function Navbar() {
               </Link>
             </div>
 
-            {/* Desktop Links (ডেস্কটপে দেখাবে, মোবাইলে হাইড থাকবে) */}
+            {/* Desktop Links */}
             <div className="hidden md:flex items-center space-x-7 text-[12px] font-bold tracking-wider uppercase">
               
               <Link href="/shop" className={`transition-all duration-200 relative py-2 group ${isShopAllActive ? 'text-amber-400' : 'text-stone-400 hover:text-white'}`}>
@@ -124,7 +118,7 @@ export default function Navbar() {
 
             </div>
 
-            {/* Right Icons with Hydration-Safe Badge Count (মোবাইল ও ডেক্সটপ উভয় মোডেই ভিজিবল) */}
+            {/* Right Icons with Hydration-Safe Badge Count */}
             <div className="flex items-center space-x-2 md:space-x-4 text-stone-300">
               <Link href="/cart" className="relative p-2 hover:bg-stone-900 rounded-full transition-all duration-200 flex items-center justify-center group hover:text-amber-400">
                 <svg className="w-5 h-5 text-stone-200 group-hover:scale-105 transition-transform" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -140,34 +134,43 @@ export default function Navbar() {
         </div>
 
         {/* 📱 Mobile Luxury Drawer Canvas Menu */}
-        <div className={`md:hidden fixed inset-x-0 top-20 bg-[#0B0A09]/95 backdrop-blur-2xl border-b border-stone-900 transition-all duration-300 origin-top overflow-hidden ${
+        <div className={`md:hidden fixed inset-x-0 top-20 bg-[#0B0A09]/95 backdrop-blur-2xl border-b border-stone-900 transition-all duration-300 origin-top overflow-hidden z-50 ${
           isOpen ? "max-h-screen opacity-100 py-6" : "max-h-0 opacity-0 py-0"
         }`}>
           <div className="flex flex-col space-y-4 px-6 text-sm font-bold tracking-widest uppercase">
             
-            <Link href="/shop" className={`py-2 transition-colors ${isShopAllActive ? 'text-amber-400' : 'text-stone-400'}`}>
+            <Link href="/shop" onClick={() => setIsOpen(false)} className={`py-2 transition-colors ${isShopAllActive ? 'text-amber-400' : 'text-stone-400'}`}>
               Shop All
             </Link>
 
-            <Link href="/shop?filter=new" className={`py-2 transition-colors ${currentFilter === 'new' ? 'text-amber-400' : 'text-stone-400'}`}>
+            <Link href="/shop?filter=new" onClick={() => setIsOpen(false)} className={`py-2 transition-colors ${currentFilter === 'new' ? 'text-amber-400' : 'text-stone-400'}`}>
               New In ⚡
             </Link>
 
-            <Link href="/shop?cat=three-piece" className={`py-2 transition-colors ${currentCat === 'three-piece' ? 'text-amber-400' : 'text-stone-400'}`}>
+            <Link href="/shop?cat=three-piece" onClick={() => setIsOpen(false)} className={`py-2 transition-colors ${currentCat === 'three-piece' ? 'text-amber-400' : 'text-stone-400'}`}>
               Three-Piece
             </Link>
 
-            <Link href="/shop?cat=lungi" className={`py-2 transition-colors ${currentCat === 'lungi' ? 'text-amber-400' : 'text-stone-400'}`}>
+            <Link href="/shop?cat=lungi" onClick={() => setIsOpen(false)} className={`py-2 transition-colors ${currentCat === 'lungi' ? 'text-amber-400' : 'text-stone-400'}`}>
               Lungi
             </Link>
 
-            <Link href="/shop?cat=cosmetics" className={`py-2 transition-colors ${currentCat === 'cosmetics' ? 'text-amber-400' : 'text-stone-400'}`}>
+            <Link href="/shop?cat=cosmetics" onClick={() => setIsOpen(false)} className={`py-2 transition-colors ${currentCat === 'cosmetics' ? 'text-amber-400' : 'text-stone-400'}`}>
               Cosmetics
             </Link>
 
           </div>
         </div>
       </nav>
+
+      {/* 🎯 নতুন যুক্ত: আউটসাইড ক্লিক লেয়ার (মেনু খোলা থাকলে ব্যাকগ্রাউন্ডে ক্লিক করলে মেনু অফ হবে) */}
+      {isOpen && (
+        <div 
+          onClick={() => setIsOpen(false)} 
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
+        />
+      )}
+      
     </div>
   );
 }
