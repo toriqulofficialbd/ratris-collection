@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { db } from "@/lib/firebase";
+import { useAlert } from "@/context/AlertContext";
 
 import {
   collection,
@@ -18,11 +19,16 @@ import {
 import * as XLSX from "xlsx";
 
 export default function ProductManager() {
+  const { showAlert } = useAlert();
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [bulkUploading, setBulkUploading] = useState(false);
-  const [editingId, setEditingId] = useState(null); // কোন প্রোডাক্টটি এডিট হচ্ছে তা ট্র্যাক করার জন্য
+  const [uploadingImage, setUploadingImage] =
+    useState(false);
+  const [bulkUploading, setBulkUploading] =
+    useState(false);
+  const [editingId, setEditingId] =
+    useState(null);
 
   const initialFormData = {
     name: "",
@@ -35,31 +41,48 @@ export default function ProductManager() {
     isFeaturedBanner: false,
   };
 
-  const [formData, setFormData] = useState(initialFormData);
+  const [formData, setFormData] =
+    useState(initialFormData);
 
   // ☁️ Live Product Fetch
   useEffect(() => {
-    const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+    const q = query(
+      collection(db, "products"),
+      orderBy("createdAt", "desc")
+    );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const liveProducts = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const liveProducts = snapshot.docs.map(
+          (doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })
+        );
 
-      setProducts(liveProducts);
-    });
+        setProducts(liveProducts);
+      }
+    );
 
     return () => unsubscribe();
   }, []);
 
   // 🔄 Input Change
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const {
+      name,
+      value,
+      type,
+      checked,
+    } = e.target;
 
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : value,
     }));
   };
 
@@ -73,10 +96,14 @@ export default function ProductManager() {
       setUploadingImage(true);
 
       const data = new FormData();
-      data.append("file", file);
-      data.append("upload_preset", "product_upload");
 
-      // ✅ আপনার Cloudinary cloud name বসান
+      data.append("file", file);
+
+      data.append(
+        "upload_preset",
+        "product_upload"
+      );
+
       const cloudName = "dwrhdbdt6";
 
       const response = await fetch(
@@ -84,10 +111,11 @@ export default function ProductManager() {
         {
           method: "POST",
           body: data,
-        },
+        }
       );
 
-      const resData = await response.json();
+      const resData =
+        await response.json();
 
       if (resData.secure_url) {
         setFormData((prev) => ({
@@ -95,13 +123,26 @@ export default function ProductManager() {
           image: resData.secure_url,
         }));
 
-        alert("📸 Image uploaded successfully!");
+        showAlert(
+          "📸 Image uploaded successfully to cloud node!",
+          "success"
+        );
       } else {
-        throw new Error(resData.error?.message || "Upload failed");
+        throw new Error(
+          resData.error?.message ||
+            "Upload failed"
+        );
       }
     } catch (error) {
-      console.error("Cloudinary upload error:", error);
-      alert("Failed to upload image: " + error.message);
+      console.error(
+        "Cloudinary upload error:",
+        error
+      );
+
+      showAlert(
+        `Failed to upload image: ${error.message}`,
+        "error"
+      );
     } finally {
       setUploadingImage(false);
     }
@@ -112,38 +153,79 @@ export default function ProductManager() {
     e.preventDefault();
 
     if (!formData.image.trim()) {
-      alert("Please upload an image first.");
+      showAlert(
+        "Please upload a product media asset image first.",
+        "error"
+      );
+
       return;
+    }
+
+    if (formData.isFeaturedBanner) {
+      const hasExistingBanner =
+        products.some(
+          (p) => p.isFeaturedBanner
+        );
+
+      if (hasExistingBanner) {
+        showAlert(
+          "⚠️ একটি Featured Banner অলরেডি সচল আছে! প্রথমে সেটি ক্লিয়ার করুন।",
+          "error"
+        );
+
+        return;
+      }
     }
 
     try {
       setLoading(true);
 
-      await addDoc(collection(db, "products"), {
-        name: formData.name,
-        price: Number(formData.price),
-        category: formData.category,
-        image: formData.image,
-        inStock: formData.inStock,
-        badge: formData.badge || "New",
-        isNewArrival: formData.isNewArrival,
-        isFeaturedBanner: formData.isFeaturedBanner,
-        createdAt: new Date().toISOString(),
-      });
+      await addDoc(
+        collection(db, "products"),
+        {
+          name: formData.name,
+          price: Number(
+            formData.price
+          ),
+          category:
+            formData.category,
+          image: formData.image,
+          inStock:
+            formData.inStock,
+          badge:
+            formData.badge ||
+            "New",
+          isNewArrival:
+            formData.isNewArrival,
+          isFeaturedBanner:
+            formData.isFeaturedBanner,
+          createdAt:
+            new Date().toISOString(),
+        }
+      );
 
-      alert("🎉 Product Published!");
+      showAlert(
+        "🎉 Product Deployed and Published Successfully!",
+        "success"
+      );
 
       setFormData(initialFormData);
     } catch (error) {
       console.error(error);
-      alert("Error: " + error.message);
+
+      showAlert(
+        `Deployment Error: ${error.message}`,
+        "error"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   // 📊 Excel Upload
-  const handleBulkExcelUpload = async (e) => {
+  const handleBulkExcelUpload = async (
+    e
+  ) => {
     const file = e.target.files[0];
 
     if (!file) return;
@@ -151,48 +233,98 @@ export default function ProductManager() {
     try {
       setBulkUploading(true);
 
-      const data = await file.arrayBuffer();
+      const data =
+        await file.arrayBuffer();
 
-      const workbook = XLSX.read(data);
+      const workbook = XLSX.read(
+        data
+      );
 
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const worksheet =
+        workbook.Sheets[
+          workbook.SheetNames[0]
+        ];
 
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const jsonData =
+        XLSX.utils.sheet_to_json(
+          worksheet
+        );
 
       let successCount = 0;
 
       for (const row of jsonData) {
         if (row.name && row.price) {
-          await addDoc(collection(db, "products"), {
-            name: String(row.name),
-            price: Number(row.price),
-            category: String(row.category || "three-piece").toLowerCase(),
-            image: String(row.image || "https://placehold.co/600x600"),
-            badge: String(row.badge || "New"),
-            inStock:
-              row.inStock === undefined
-                ? true
-                : String(row.inStock).toLowerCase() === "true",
-            isNewArrival:
-              row.isNewArrival === undefined
-                ? false
-                : String(row.isNewArrival).toLowerCase() === "true",
-            isFeaturedBanner:
-              row.isFeaturedBanner === undefined
-                ? false
-                : String(row.isFeaturedBanner).toLowerCase() === "true",
-            createdAt: new Date().toISOString(),
-          });
+          await addDoc(
+            collection(db, "products"),
+            {
+              name: String(row.name),
+              price: Number(
+                row.price
+              ),
+              category: String(
+                row.category ||
+                  "three-piece"
+              ).toLowerCase(),
+
+              image: String(
+                row.image ||
+                  "https://placehold.co/600x600"
+              ),
+
+              badge: String(
+                row.badge || "New"
+              ),
+
+              inStock:
+                row.inStock ===
+                undefined
+                  ? true
+                  : String(
+                      row.inStock
+                    ).toLowerCase() ===
+                    "true",
+
+              isNewArrival:
+                row.isNewArrival ===
+                undefined
+                  ? false
+                  : String(
+                      row.isNewArrival
+                    ).toLowerCase() ===
+                    "true",
+
+              isFeaturedBanner:
+                row.isFeaturedBanner ===
+                undefined
+                  ? false
+                  : String(
+                      row.isFeaturedBanner
+                    ).toLowerCase() ===
+                    "true",
+
+              createdAt:
+                new Date().toISOString(),
+            }
+          );
 
           successCount++;
         }
       }
 
-      alert(`Bulk Sync Complete! ${successCount} products added.`);
+      showAlert(
+        `📊 Bulk Sync Complete! ${successCount} products mapped into database ledger.`,
+        "success"
+      );
     } catch (error) {
-      console.error("Excel Error:", error);
+      console.error(
+        "Excel Error:",
+        error
+      );
 
-      alert("Failed to upload excel sheet.");
+      showAlert(
+        "Failed to parse and upload excel spreadsheet matrix.",
+        "error"
+      );
     } finally {
       setBulkUploading(false);
 
@@ -201,100 +333,272 @@ export default function ProductManager() {
   };
 
   // ❌ Delete
-  const handleDelete = async (productId) => {
-    if (confirm("Are you absolute sure to delete this piece from vault?")) {
-      await deleteDoc(doc(db, "products", productId));
+  const handleDelete = async (
+    productId
+  ) => {
+    const confirmDelete =
+      window.confirm(
+        "Are you absolute sure to delete this piece from vault?"
+      );
+
+    if (!confirmDelete) return;
+
+    try {
+      await deleteDoc(
+        doc(db, "products", productId)
+      );
+
+      showAlert(
+        "🗑️ Product permanent deleted from catalog.",
+        "success"
+      );
+    } catch (error) {
+      showAlert(
+        `Deletion Fault: ${error.message}`,
+        "error"
+      );
     }
   };
 
   // 🔄 Stock Toggle
-  const toggleStock = async (productId, currentStatus) => {
-    await updateDoc(doc(db, "products", productId), {
-      inStock: !currentStatus,
-    });
+  const toggleStock = async (
+    productId,
+    currentStatus
+  ) => {
+    try {
+      await updateDoc(
+        doc(db, "products", productId),
+        {
+          inStock: !currentStatus,
+        }
+      );
+
+      showAlert(
+        `Stock node updated to ${
+          !currentStatus
+            ? "In Stock"
+            : "Out of Stock"
+        }`,
+        "success"
+      );
+    } catch (error) {
+      showAlert(
+        "Failed to update warehouse stock metric.",
+        "error"
+      );
+    }
   };
 
-  // ১. এডিট বাটনে ক্লিক করলে ডেটা ফর্মে পাঠানোর ফাংশন
-  const handleEditClick = (product) => {
+  // ⭐ Banner Toggle
+  const toggleFeaturedBanner =
+    async (
+      productId,
+      currentStatus
+    ) => {
+      if (!currentStatus) {
+        const hasExistingBanner =
+          products.some(
+            (p) =>
+              p.isFeaturedBanner &&
+              p.id !== productId
+          );
+
+        if (hasExistingBanner) {
+          showAlert(
+            "⚠️ একটি Featured Banner অলরেডি সচল আছে! প্রথমে সেটি রিমুভ করুন।",
+            "error"
+          );
+
+          return;
+        }
+      }
+
+      try {
+        await updateDoc(
+          doc(db, "products", productId),
+          {
+            isFeaturedBanner:
+              !currentStatus,
+          }
+        );
+
+        showAlert(
+          currentStatus
+            ? "🛑 Master Showcase Banner Disabled Successfully!"
+            : "✨ Node deployed to Live Main Featured Hero Banner Stage!",
+          "success"
+        );
+      } catch (error) {
+        showAlert(
+          `Error configuring banner stage: ${error.message}`,
+          "error"
+        );
+      }
+    };
+
+  // ✏️ Edit Click
+  const handleEditClick = (
+    product
+  ) => {
     setEditingId(product.id);
+
     setFormData({
       name: product.name,
       price: product.price,
       category: product.category,
       image: product.image,
-      inStock: product.inStock ?? true,
+      inStock:
+        product.inStock ?? true,
       badge: product.badge || "",
-      isNewArrival: product.isNewArrival ?? false,
-      isFeaturedBanner: product.isFeaturedBanner ?? false,
+      isNewArrival:
+        product.isNewArrival ??
+        false,
+      isFeaturedBanner:
+        product.isFeaturedBanner ??
+        false,
     });
-    // স্ক্রল করে স্মুথলি ফর্মে নিয়ে যাওয়ার জন্য
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
-  // ২. এডিট করা প্রোডাক্টটি ফায়ারবেসে সেভ করার ফাংশন
-  const handleUpdateSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.image) return alert("Please upload an image first.");
+  // 🔄 Update Submit
+  const handleUpdateSubmit =
+    async (e) => {
+      e.preventDefault();
 
-    setLoading(true);
-    try {
-      await updateDoc(doc(db, "products", editingId), {
-        name: formData.name,
-        price: Number(formData.price),
-        category: formData.category,
-        image: formData.image,
-        inStock: formData.inStock,
-        badge: formData.badge || "New",
-        isNewArrival: formData.isNewArrival,
-        isFeaturedBanner: formData.isFeaturedBanner,
-      });
-      alert("✨ Product Updated Successfully!");
-      // ফর্ম রিসেট করা
-      setEditingId(null);
-      setFormData({
-        name: "",
-        price: "",
-        category: "three-piece",
-        image: "",
-        inStock: true,
-        badge: "",
-        isNewArrival: false,
-        isFeaturedBanner: false,
-      });
-    } catch (error) {
-      alert("Update Error: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (!formData.image) {
+        showAlert(
+          "Please upload a product asset image node first.",
+          "error"
+        );
+
+        return;
+      }
+
+      if (
+        formData.isFeaturedBanner
+      ) {
+        const hasExistingBanner =
+          products.some(
+            (p) =>
+              p.isFeaturedBanner &&
+              p.id !== editingId
+          );
+
+        if (hasExistingBanner) {
+          showAlert(
+            "⚠️ একটি Featured Banner অলরেডি সচল আছে! দয়া করে সেটি বন্ধ করে সাবমিট করুন।",
+            "error"
+          );
+
+          return;
+        }
+      }
+
+      try {
+        setLoading(true);
+
+        await updateDoc(
+          doc(
+            db,
+            "products",
+            editingId
+          ),
+          {
+            name: formData.name,
+            price: Number(
+              formData.price
+            ),
+            category:
+              formData.category,
+            image: formData.image,
+            inStock:
+              formData.inStock,
+            badge:
+              formData.badge ||
+              "New",
+            isNewArrival:
+              formData.isNewArrival,
+            isFeaturedBanner:
+              formData.isFeaturedBanner,
+          }
+        );
+
+        showAlert(
+          "✨ Product Asset Specs Synchronized Successfully!",
+          "success"
+        );
+
+        setEditingId(null);
+
+        setFormData(initialFormData);
+      } catch (error) {
+        showAlert(
+          `Sync Updates Interrupted: ${error.message}`,
+          "error"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
   return (
-    <div className="min-h-screen bg-[#060504] text-zinc-100 lg:pl-64">
+    <div className="min-h-screen bg-[#060504] text-zinc-100 lg:pl-64 antialiased">
       <AdminSidebar />
 
       <main className="p-4 sm:p-8 lg:p-10 max-w-7xl mx-auto pt-24 lg:pt-10">
-        <header className="mb-10 border-b border-[#1C1A17] pb-6">
-          <h1 className="text-2xl font-light uppercase tracking-widest text-zinc-100 font-serif">
-            Product Portfolio Manager
-          </h1>
+        <header className="mb-10 border-b border-[#1C1A17] pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-light uppercase tracking-widest text-zinc-100 font-serif">
+              Product Portfolio Manager
+            </h1>
 
-          <p className="text-xs text-zinc-500 tracking-wider mt-1">
-            Connected Live with Firebase Cloud.
-          </p>
+            <p className="text-xs text-zinc-500 tracking-wider mt-1">
+              Connected Live with Firebase
+              Cloud.
+            </p>
+          </div>
+
+          <label className="cursor-pointer text-xs uppercase tracking-widest bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 py-2.5 px-4 rounded transition active:scale-95">
+            {bulkUploading
+              ? "Uploading Sync..."
+              : "Import Excel Matrix"}
+
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={
+                handleBulkExcelUpload
+              }
+              className="hidden"
+              disabled={bulkUploading}
+            />
+          </label>
         </header>
 
+        {/* FORM NODE UTILITY */}
         <div className="grid grid-cols-1 gap-10">
           <div className="bg-[#0B0A09] border border-[#1C1A17] p-6 sm:p-8 rounded h-fit">
-           
+            <h2 className="text-sm uppercase tracking-widest text-zinc-400 font-semibold mb-6 border-b border-zinc-900 pb-2">
+              {editingId
+                ? "✨ Edit Asset Metrics"
+                : "➕ Product Entry System"}
+            </h2>
 
-            {/* FORM */}
             <form
               className="space-y-4"
-              onSubmit={editingId ? handleUpdateSubmit : handleSubmit}
+              onSubmit={
+                editingId
+                  ? handleUpdateSubmit
+                  : handleSubmit
+              }
             >
               {/* NAME */}
               <div>
-                <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2">
+                <label className="block text-xs uppercase tracking-wider text-zinc-500 mb-2">
                   Product Name
                 </label>
 
@@ -302,305 +606,362 @@ export default function ProductManager() {
                   type="text"
                   name="name"
                   value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="Premium Cotton Traditional Three Piece"
-                  className="w-full bg-[#12110F] border border-[#1C1A17] p-3 text-xs rounded text-zinc-200 focus:outline-none focus:border-[#C5A880]"
+                  onChange={
+                    handleInputChange
+                  }
                   required
+                  placeholder="Enter product name..."
+                  className="w-full bg-[#12110F] border border-zinc-800 rounded p-3 text-zinc-200"
                 />
               </div>
 
-              {/* PRICE + CATEGORY */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* PRICE & CATEGORY */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2">
-                    Price (BDT)
+                  <label className="block text-xs uppercase tracking-wider text-zinc-500 mb-2">
+                    Base Price (BDT)
                   </label>
 
                   <input
                     type="number"
                     name="price"
                     value={formData.price}
-                    onChange={handleInputChange}
-                    placeholder="1250"
-                    className="w-full bg-[#12110F] border border-[#1C1A17] p-3 text-xs rounded text-zinc-200 focus:outline-none focus:border-[#C5A880]"
+                    onChange={
+                      handleInputChange
+                    }
                     required
+                    className="w-full bg-[#12110F] border border-zinc-800 rounded p-3 text-zinc-200"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2">
-                    Category
+                  <label className="block text-xs uppercase tracking-wider text-zinc-500 mb-2">
+                    Category Stack
                   </label>
 
                   <select
                     name="category"
                     value={formData.category}
-                    onChange={handleInputChange}
-                    className="w-full bg-[#12110F] border border-[#1C1A17] p-3 text-xs rounded text-zinc-200 focus:outline-none focus:border-[#C5A880] h-[45px]"
+                    onChange={
+                      handleInputChange
+                    }
+                    className="w-full bg-[#12110F] border border-zinc-800 rounded p-3 text-zinc-200"
                   >
-                    <option value="three-piece">Three-Piece</option>
+                    <option value="three-piece">
+                      Three-Piece
+                    </option>
 
-                    <option value="lungi">Lungi</option>
+                    <option value="kurti">
+                      Kurti
+                    </option>
 
-                    <option value="cosmetics">Cosmetics</option>
+                    <option value="saree">
+                      Saree
+                    </option>
 
-                    <option value="fabric">Fabric</option>
+                    <option value="unstitched">
+                      Unstitched
+                    </option>
                   </select>
                 </div>
               </div>
 
-              {/* IMAGE + BADGE */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2">
-                    {uploadingImage
-                      ? "Uploading Asset..."
-                      : "Image URL / Local File"}
-                  </label>
+              {/* BADGE */}
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-zinc-500 mb-2">
+                  Custom Badge Tag
+                </label>
 
-                  <div className="flex gap-2">
-                    <input
-                      type="url"
-                      name="image"
-                      value={formData.image}
-                      onChange={handleInputChange}
-                      placeholder="https://..."
-                      className="flex-1 bg-[#12110F] border border-[#1C1A17] p-3 text-xs rounded text-zinc-200 focus:outline-none focus:border-[#C5A880]"
+                <input
+                  type="text"
+                  name="badge"
+                  value={formData.badge}
+                  onChange={
+                    handleInputChange
+                  }
+                  placeholder="New / Hot"
+                  className="w-full bg-[#12110F] border border-zinc-800 rounded p-3 text-zinc-200"
+                />
+              </div>
+
+              {/* IMAGE */}
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-zinc-500 mb-2">
+                  Media Image
+                </label>
+
+                {formData.image ? (
+                  <div className="space-y-3">
+                    <img
+                      src={formData.image}
+                      alt="Preview"
+                      className="w-32 h-32 object-cover rounded border border-zinc-800"
                     />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData(
+                          (
+                            prev
+                          ) => ({
+                            ...prev,
+                            image: "",
+                          })
+                        )
+                      }
+                      className="text-[11px] uppercase tracking-wider text-red-400 hover:underline"
+                    >
+                      Purge & Map New
+                      Image Asset
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center w-full border border-dashed border-zinc-700 rounded p-6 cursor-pointer hover:border-zinc-500 transition">
+                    <span className="text-xs uppercase tracking-wider text-zinc-400">
+                      {uploadingImage
+                        ? "⚡ Core Syncing Media Matrix..."
+                        : "📸 Cloudinary Secure File Dropzone"}
+                    </span>
 
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={handleImageFileChange}
+                      onChange={
+                        handleImageFileChange
+                      }
                       className="hidden"
-                      id="fileUpload"
                     />
-
-                    <label
-                      htmlFor="fileUpload"
-                      className="bg-[#1C1A17] border border-[#302D28] text-zinc-300 text-xs px-4 py-3 rounded cursor-pointer hover:bg-[#2A2723] transition-colors"
-                    >
-                      Browse
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2">
-                    Badge
                   </label>
-
-                  <input
-                    type="text"
-                    name="badge"
-                    value={formData.badge}
-                    onChange={handleInputChange}
-                    placeholder="New / Hot / Sale"
-                    className="w-full bg-[#12110F] border border-[#1C1A17] p-3 text-xs rounded text-zinc-200 focus:outline-none focus:border-[#C5A880]"
-                  />
-                </div>
+                )}
               </div>
 
-              {/* CHECKBOXES */}
-              <div className="flex flex-wrap gap-6 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-400">
+              {/* FLAGS */}
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 text-sm text-zinc-300">
                   <input
                     type="checkbox"
                     name="inStock"
-                    checked={formData.inStock}
-                    onChange={handleInputChange}
-                    className="accent-[#C5A880]"
+                    checked={
+                      formData.inStock
+                    }
+                    onChange={
+                      handleInputChange
+                    }
                   />
-                  In Stock
+                  Available In Stock
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-400">
+                <label className="flex items-center gap-3 text-sm text-zinc-300">
                   <input
                     type="checkbox"
                     name="isNewArrival"
-                    checked={formData.isNewArrival}
-                    onChange={handleInputChange}
-                    className="accent-[#C5A880]"
+                    checked={
+                      formData.isNewArrival
+                    }
+                    onChange={
+                      handleInputChange
+                    }
                   />
-                  New Arrival
+                  Mark New Collection
+                  Pipeline
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-400">
+                <label className="flex items-center gap-3 text-sm text-zinc-300">
                   <input
                     type="checkbox"
                     name="isFeaturedBanner"
-                    checked={formData.isFeaturedBanner}
-                    onChange={handleInputChange}
-                    className="accent-[#C5A880]"
+                    checked={
+                      formData.isFeaturedBanner
+                    }
+                    onChange={
+                      handleInputChange
+                    }
                   />
-                  Featured Banner
+                  Deploy as Master Hero
+                  Feature Showcase
                 </label>
               </div>
 
-              {/* SUBMIT */}
-              <button
-                type="submit"
-                disabled={loading || uploadingImage}
-                className="w-full bg-[#C5A880] text-black font-medium text-xs uppercase tracking-widest p-4 rounded hover:bg-[#B3966E] transition-colors disabled:opacity-50"
-              >
-                {loading
-                  ? "Processing..."
-                  : editingId
-                    ? "Update Product"
-                    : "Publish Product"}
-              </button>
+              {/* ACTIONS */}
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={
+                    loading ||
+                    uploadingImage
+                  }
+                  className="flex-1 text-center bg-zinc-100 hover:bg-zinc-200 text-black font-semibold py-3.5 rounded text-xs uppercase tracking-widest transition active:scale-[0.99] disabled:opacity-40"
+                >
+                  {loading
+                    ? "Processing Sync Node..."
+                    : editingId
+                    ? "Save Catalog Updates"
+                    : "Deploy Component Item"}
+                </button>
+
+                {editingId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingId(
+                        null
+                      );
+
+                      setFormData(
+                        initialFormData
+                      );
+                    }}
+                    className="bg-zinc-900 border border-zinc-800 text-zinc-400 px-5 rounded text-xs uppercase tracking-wider hover:bg-zinc-800"
+                  >
+                    Abort Changes
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
-           {/* BULK IMPORT */}
-            <div className="mb-6 p-4 border border-dashed border-zinc-700 bg-zinc-900/40 rounded">
-              <label className="block text-xs uppercase tracking-widest text-zinc-400 mb-2">
-                {bulkUploading
-                  ? "Uploading Bulk Sheet..."
-                  : "Bulk Import via Excel"}
-              </label>
+          {/* PRODUCTS */}
+          <div>
+            <h2 className="text-sm uppercase tracking-widest text-zinc-400 font-semibold mb-6">
+              Live Vault Registry Data (
+              {products.length} Units Map)
+            </h2>
 
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                disabled={bulkUploading}
-                onChange={handleBulkExcelUpload}
-                className="block w-full text-xs text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-medium file:bg-zinc-800 file:text-zinc-300 hover:file:bg-zinc-700 cursor-pointer disabled:opacity-50"
-              />
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {products.length === 0 ? (
+                <div className="text-zinc-500 text-sm">
+                  No core items recorded
+                  inside live asset
+                  registry node.
+                </div>
+              ) : (
+                products.map((product) => (
+                  <div
+                    key={product.id}
+                    className={`bg-[#0B0A09] border ${
+                      editingId ===
+                      product.id
+                        ? "border-zinc-400 ring-1 ring-zinc-400"
+                        : "border-[#1C1A17]"
+                    } rounded-2xl p-4 relative overflow-hidden backdrop-blur-md transition active:scale-[0.99]`}
+                  >
+                    <div className="relative w-full h-64 rounded-xl overflow-hidden mb-4">
+                      <img
+                        src={
+                          product.image ||
+                          "https://placehold.co/600x600"
+                        }
+                        alt={
+                          product.name
+                        }
+                        className="w-full h-full object-cover"
+                      />
 
-          {/* LIVE PRODUCTS TABLE */}
-          <div className="bg-[#0B0A09] border border-[#1C1A17] rounded overflow-hidden">
-            <div className="p-6 border-b border-[#1C1A17]">
-              <h2 className="text-sm uppercase tracking-[0.3em] text-zinc-300">
-                Live Inventory ({products.length})
-              </h2>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-[#12110F]">
-                  <tr>
-                    <th className="text-left p-4 text-[10px] uppercase tracking-widest text-zinc-500">
-                      Product
-                    </th>
-
-                    <th className="text-left p-4 text-[10px] uppercase tracking-widest text-zinc-500">
-                      Category
-                    </th>
-
-                    <th className="text-left p-4 text-[10px] uppercase tracking-widest text-zinc-500">
-                      Price
-                    </th>
-
-                    <th className="text-left p-4 text-[10px] uppercase tracking-widest text-zinc-500">
-                      Status
-                    </th>
-
-                    <th className="text-left p-4 text-[10px] uppercase tracking-widest text-zinc-500">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-[#1C1A17]">
-                  {products.map((product) => (
-                    <tr
-                      key={product.id}
-                      className="group hover:bg-[#12110F]/50 transition-all duration-300 border-b border-[#1C1A17]"
-                    >
-                      {/* ১. প্রোডাক্ট ইমেজ ও নাম */}
-                      <td className="p-4 flex items-center gap-4">
-                        <div className="relative w-12 h-12 rounded overflow-hidden border border-[#1C1A17] bg-[#12110F] shadow-inner group-hover:border-[#C5A880]/30 transition-colors">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
+                      {!product.inStock && (
+                        <div className="absolute top-2 right-2 bg-red-500 text-white text-[10px] px-2 py-1 rounded">
+                          SOLD OUT
                         </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-medium text-xs text-zinc-200 tracking-wide truncate max-w-[180px] group-hover:text-zinc-100 transition-colors">
-                            {product.name}
-                          </span>
-                          {product.badge && (
-                            <span className="text-[9px] text-[#C5A880] tracking-widest uppercase mt-0.5 font-light">
-                              {product.badge}
-                            </span>
-                          )}
-                        </div>
-                      </td>
+                      )}
+                    </div>
 
-                      {/* ২. ক্যাটাগরি */}
-                      <td className="p-4">
-                        <span className="inline-block bg-[#12110F] border border-[#1C1A17] px-2.5 py-1 rounded-sm text-[10px] uppercase tracking-widest text-zinc-400 font-medium">
-                          {product.category}
-                        </span>
-                      </td>
-
-                      {/* ৩. প্রাইস */}
-                      <td className="p-4 font-mono text-xs text-zinc-300 font-medium tracking-wide">
-                        {Number(product.price).toLocaleString()}{" "}
-                        <span className="text-[10px] text-zinc-500 font-sans font-light ml-0.5">
-                          BDT
-                        </span>
-                      </td>
-
-                      {/* ৪. স্টক স্ট্যাটাস */}
-                      <td className="p-4">
-                        <button
-                          onClick={() =>
-                            toggleStock(product.id, product.inStock)
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs uppercase text-zinc-500">
+                          {
+                            product.category
                           }
-                          className={`px-3 py-1 rounded-full text-[9px] uppercase tracking-widest font-semibold transition-all duration-300 border backdrop-blur-sm active:scale-95 ${
+                        </span>
+
+                        {product.badge && (
+                          <span className="text-[10px] bg-zinc-800 text-zinc-300 px-2 py-1 rounded">
+                            {
+                              product.badge
+                            }
+                          </span>
+                        )}
+
+                        {product.isFeaturedBanner && (
+                          <span className="text-[10px] bg-amber-500 text-black px-2 py-1 rounded">
+                            ⚡ Featured
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="text-lg font-medium text-zinc-100">
+                        {product.name}
+                      </h3>
+
+                      <p className="text-zinc-300">
+                        ৳
+                        {Number(
+                          product.price
+                        ).toLocaleString()}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      <button
+                        onClick={() =>
+                          toggleStock(
+                            product.id,
                             product.inStock
-                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20"
-                              : "bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
-                          }`}
-                        >
-                          <span
-                            className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 animate-pulse ${product.inStock ? "bg-emerald-400" : "bg-rose-400"}`}
-                          ></span>
-                          {product.inStock ? "In Stock" : "Out of Stock"}
-                        </button>
-                      </td>
-
-                      {/* ৫. অ্যাকশন বাটনসমূহ (Edit + Delete) */}
-                      <td className="p-4 text-right">
-                        <div className="flex items-center  gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                          <button
-                            onClick={() => handleEditClick(product)}
-                            className="text-zinc-400 hover:text-[#C5A880] border border-[#1C1A17] hover:border-[#C5A880]/30 bg-[#12110F] px-2.5 py-1.5 rounded text-[10px] uppercase tracking-widest transition-colors"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(product.id)}
-                            className="text-zinc-500 hover:text-rose-400 border border-[#1C1A17] hover:border-rose-950/50 hover:bg-rose-950/30 px-2.5 py-1.5 rounded text-[10px] uppercase tracking-widest transition-colors"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-
-                  {products.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan="5"
-                        className="text-center py-16 border-b border-[#1C1A17]"
+                          )
+                        }
+                        className={`text-[10px] uppercase font-semibold tracking-wider px-2.5 py-1.5 rounded-lg border transition-all ${
+                          product.inStock
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                            : "bg-zinc-900 text-zinc-500 border-zinc-800"
+                        }`}
                       >
-                        <div className="flex flex-col items-center justify-center opacity-40">
-                          <span className="text-2xl mb-2">📦</span>
-                          <p className="text-xs uppercase tracking-widest text-zinc-500 font-light">
-                            No pieces found in the vault.
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                        {product.inStock
+                          ? "Active"
+                          : "OOS"}
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          toggleFeaturedBanner(
+                            product.id,
+                            product.isFeaturedBanner
+                          )
+                        }
+                        className={`text-[10px] uppercase font-semibold tracking-wider px-2.5 py-1.5 rounded-lg border transition-all ${
+                          product.isFeaturedBanner
+                            ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                            : "bg-zinc-900 text-zinc-400 border-zinc-800"
+                        }`}
+                      >
+                        {product.isFeaturedBanner
+                          ? "Remove Banner"
+                          : "Set Banner"}
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          handleEditClick(
+                            product
+                          )
+                        }
+                        className="p-2 bg-[#12110F] border border-zinc-800 text-zinc-300 hover:text-zinc-100 rounded-xl transition active:scale-90 text-xs"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          handleDelete(
+                            product.id
+                          )
+                        }
+                        className="p-2 bg-[#12110F] border border-red-950/40 text-red-400/80 hover:text-red-400 rounded-xl transition active:scale-90 text-xs"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
