@@ -26,6 +26,20 @@ export default function OrderTracking() {
     onConfirm: null,
   });
 
+   // 🎯 নতুন যুক্ত: কনফার্মেশন মডাল অন থাকলে স্ক্রলিং বন্ধ করার লজিক
+  useEffect(() => {
+    if (modalConfig.isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    // আনমাউন্ট ক্লিনআপ
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [modalConfig.isOpen]);
+
   // ☁️ Live Firebase Sync
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
@@ -334,9 +348,20 @@ export default function OrderTracking() {
                         <h3 className="text-sm font-bold text-zinc-200 tracking-wide">
                           {order.customerName}
                         </h3>
-                        <p className="text-[9px] font-mono text-zinc-500 mt-0.5">
-                          {order.id}
-                        </p>
+                        <div
+                            onClick={() =>
+                              handleCopyToClipboard(order.trackingId)
+                            }
+                            className="cursor-pointer hover:text-amber-400 transition-colors"
+                            title={`Click to copy: ${order.trackingId || "No ID"}`}
+                          >
+                            <span className="text-[#C5A880] font-black">
+                              {order.trackingId || "N/A"}
+                            </span>
+                            <span className="text-[9px] block text-zinc-600 opacity-60">
+                              UID: {order.id.slice(0, 5)}...
+                            </span>
+                          </div>
                       </div>
                       <div className="text-[#C5A880] text-xs font-black bg-[#12110F] px-2.5 py-1 rounded border border-stone-900">
                         {order.total}

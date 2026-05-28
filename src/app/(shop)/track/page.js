@@ -113,7 +113,7 @@ function TrackOrderContent() {
   const currentStepIndex = steps.indexOf(currentStatus);
 
   return (
-    <div className="bg-[#0B0A09] min-h-screen text-stone-100 selection:bg-amber-600 selection:text-black p-6 md:p-12 pt-24 md:pt-32">
+    <div className="bg-[#0B0A09] min-h-screen text-stone-100 selection:bg-amber-600 selection:text-black p-6 md:p-12 ">
       <div className="max-w-2xl mx-auto space-y-8">
 
         {/* HEADER */}

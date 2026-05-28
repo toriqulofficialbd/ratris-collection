@@ -4,6 +4,7 @@
 import { Suspense } from "react"; // 🎯 প্রোডাকশন বিল্ড ফিক্সের জন্য Suspense যুক্ত করা হলো
 import Navbar from "@/components/Navbar";
 import { CartProvider } from "@/context/CartContext"; // আপনার কার্ট কন্টেক্সট ইমপোর্ট করা হলো
+import Footer from "@/components/Footer";
 
 export default function ShopLayout({ children }) {
   return (
@@ -16,6 +17,7 @@ export default function ShopLayout({ children }) {
       </Suspense>
       
       <main>{children}</main>
+      <Footer/>
     </CartProvider>
   );
 }

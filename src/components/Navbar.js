@@ -22,6 +22,28 @@ export default function Navbar() {
   const currentFilter = searchParams.get("filter");
   const { cart } = useCart();
 
+  // 🎯 মোবাইল মেনু অন থাকলে স্ক্রল বন্ধ রাখার লজিক
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    // কম্পোনেন্ট আনমাউন্ট হলে যেন বডি নরমাল থাকে
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
+ useEffect(() => {
+    const handleRouteChange = setTimeout(() => {
+      setIsOpen(false);
+    }, 0);
+
+    return () => clearTimeout(handleRouteChange);
+  }, [pathname, searchParams]);
+
   // 🎯 হাইড্রেশন ফিক্স এবং ফায়ারবেস নোটিশ লাইভ সিঙ্ক
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -58,7 +80,7 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             {/* Mobile Hamburger Trigger */}
-            <div className="flex md:hidden">
+            <div className="flex lg:hidden">
               <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="text-stone-300 hover:text-amber-400 focus:outline-none transition-colors p-2"
@@ -101,7 +123,7 @@ export default function Navbar() {
             </div>
 
             {/* Desktop Links */}
-            <div className="hidden md:flex items-center space-x-7 text-[12px] font-bold tracking-wider uppercase">
+            <div className="hidden lg:flex items-center space-x-7 text-[12px] font-bold tracking-wider uppercase">
               <Link
                 href="/shop"
                 className={`transition-all duration-200 relative py-2 group ${isShopAllActive ? "text-amber-400" : "text-stone-400 hover:text-white"}`}
@@ -209,7 +231,7 @@ export default function Navbar() {
 
         {/* 📱 Mobile Luxury Drawer Canvas Menu */}
         <div
-          className={`md:hidden fixed inset-x-0 top-20 bg-[#0B0A09]/95 backdrop-blur-2xl border-b border-stone-900 transition-all duration-300 origin-top overflow-hidden z-50 ${
+          className={`lg:hidden fixed inset-x-0 top-20 bg-[#0B0A09]/95 backdrop-blur-2xl border-b border-stone-900 transition-all duration-300 origin-top overflow-hidden z-50 ${
             isOpen ? "max-h-screen opacity-100 py-6" : "max-h-0 opacity-0 py-0"
           }`}
         >

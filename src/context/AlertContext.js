@@ -1,7 +1,6 @@
-// src/context/AlertContext.js
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react"; // 🎯 Added useEffect
 
 const AlertContext = createContext();
 
@@ -9,9 +8,37 @@ export function AlertProvider({ children }) {
   const [alertState, setAlertState] = useState({
     isOpen: false,
     message: "",
-    type: "success", // 'success' অথবা 'error'
-    onConfirm: null  // যদি ক্লিক করার পর কোনো কাজ (যেমন রিডাইরেক্ট) করতে চান
+    type: "success", 
+    onConfirm: null  
   });
+
+  // 🎯 DIRECT SCROLL LOCK MECHANISM
+  useEffect(() => {
+    const htmlNode = document.documentElement;
+    const bodyNode = document.body;
+
+    if (alertState.isOpen) {
+      // Locks both mobile touch and desktop scrollbars securely using Tailwind fallbacks
+      htmlNode.style.setProperty("overflow", "hidden", "important");
+      bodyNode.style.setProperty("overflow", "hidden", "important");
+      bodyNode.style.setProperty("touch-action", "none", "important");
+    } else {
+      // Fully cleans up properties once the alert goes away
+      htmlNode.style.removeProperty("overflow");
+      bodyNode.style.removeProperty("overflow");
+      bodyNode.style.removeProperty("touch-action");
+      
+      htmlNode.style.overflow = "unset";
+      bodyNode.style.overflow = "unset";
+      bodyNode.style["touch-action"] = "auto";
+    }
+
+    return () => {
+      htmlNode.style.removeProperty("overflow");
+      bodyNode.style.removeProperty("overflow");
+      bodyNode.style.removeProperty("touch-action");
+    };
+  }, [alertState.isOpen]); // Fires instantly every time isOpen changes
 
   const showAlert = (message, type = "success", onConfirm = null) => {
     setAlertState({ isOpen: true, message, type, onConfirm });
@@ -25,7 +52,8 @@ export function AlertProvider({ children }) {
   };
 
   return (
-    <AlertContext.Provider value={{ showAlert }}>
+    // 🎯 Added alertState to context value so other sheets can read it if ever needed
+    <AlertContext.Provider value={{ showAlert, alertState }}>
       {children}
 
       {/* 👑 GLOBAL LUXURY ALERT MODAL MATRIX */}

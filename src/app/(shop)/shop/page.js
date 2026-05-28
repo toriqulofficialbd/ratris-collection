@@ -76,13 +76,19 @@ function ShopContent() {
   }, []);
 
   // 🎯 Add To Cart Feedback
+   
   const handleAddToCartWithFeedback = (product) => {
     setAddingStates((prev) => ({
       ...prev,
       [product.id]: "loading",
     }));
 
-    addToCart(product);
+    // 🎯 নতুন পরিবর্তন: সঠিক ডিসকাউন্ট প্রাইস কার্ট অবজেক্টে পাস করা হলো
+    const activePrice = product.isOffer && product.discountPercent > 0 
+      ? product.salePrice 
+      : (product.regularPrice || product.price || 0);
+
+    addToCart({ ...product, price: activePrice });
 
     setTimeout(() => {
       setAddingStates((prev) => ({
@@ -98,6 +104,7 @@ function ShopContent() {
       }, 1000);
     }, 800);
   };
+
 
   // FILTER PROCESS
   let filteredProducts = [...products];
@@ -166,18 +173,23 @@ function ShopContent() {
     );
   }
 
-  // SORTING
+    // SORTING (লাইন ১৬১)
   if (globalSettings.enablePriceSorting) {
     if (sortBy === "price-low") {
-      filteredProducts.sort(
-        (a, b) => Number(a.price) - Number(b.price)
-      );
+      filteredProducts.sort((a, b) => {
+        const pA = a.isOffer && a.discountPercent > 0 ? Number(a.salePrice) : Number(a.regularPrice || a.price || 0);
+        const pB = b.isOffer && b.discountPercent > 0 ? Number(b.salePrice) : Number(b.regularPrice || b.price || 0);
+        return pA - pB;
+      });
     } else if (sortBy === "price-high") {
-      filteredProducts.sort(
-        (a, b) => Number(b.price) - Number(a.price)
-      );
+      filteredProducts.sort((a, b) => {
+        const pA = a.isOffer && a.discountPercent > 0 ? Number(a.salePrice) : Number(a.regularPrice || a.price || 0);
+        const pB = b.isOffer && b.discountPercent > 0 ? Number(b.salePrice) : Number(b.regularPrice || b.price || 0);
+        return pB - pA;
+      });
     }
   }
+
 
   // RESET FILTERS
   const clearUrlFilters = () => {
@@ -196,7 +208,7 @@ function ShopContent() {
 
   return (
     <div className="bg-[#0B0A09] min-h-screen text-stone-100 selection:bg-amber-600 selection:text-black p-6 md:p-12">
-      <div className="max-w-7xl mx-auto pt-24">
+      <div className="max-w-7xl mx-auto ">
 
         {/* HEADER */}
         <header className="mb-10 border-b border-stone-900 pb-8">
@@ -281,57 +293,32 @@ function ShopContent() {
                     }`}
                   />
 
-                  In Stock Only
+                                   In Stock Only
                 </label>
               )}
 
-              {/* SORT */}
+              {/* SORT DROPDOWN (🎯 সোর্টিং নোড) */}
               {globalSettings.enablePriceSorting && (
                 <div className="relative w-full sm:w-auto">
                   <select
                     value={sortBy}
-                    onChange={(e) =>
-                      setSortBy(e.target.value)
-                    }
+                    onChange={(e) => setSortBy(e.target.value)}
                     className="w-full sm:w-auto bg-[#0B0A09] border border-stone-800 text-[11px] uppercase tracking-widest font-bold text-stone-300 rounded-lg px-4 py-3 outline-none cursor-pointer focus:border-amber-500/50 transition-all appearance-none pr-10"
                   >
-                    <option value="default">
-                      Sort: Default Order
-                    </option>
-
-                    <option value="price-low">
-                      Price: Low to High
-                    </option>
-
-                    <option value="price-high">
-                      Price: High to Low
-                    </option>
+                    <option value="default">Sort: Default Order</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
                   </select>
-
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-stone-500">
-                    <svg
-                      className="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M19 9l-7 7-7-7"
-                      />
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
                   </div>
                 </div>
               )}
 
-              {/* RESET */}
-              {(currentCat ||
-                currentFilter ||
-                searchQuery ||
-                sortBy !== "default" ||
-                hideOutOfStock) && (
+              {/* RESET TRIGGER BUTTON */}
+              {(currentCat || currentFilter || searchQuery || sortBy !== "default" || hideOutOfStock) && (
                 <button
                   onClick={clearUrlFilters}
                   className="text-[10px] uppercase font-black tracking-widest text-amber-500 hover:text-amber-400 transition-colors py-2 pl-2"
@@ -342,6 +329,7 @@ function ShopContent() {
             </div>
           </div>
         )}
+
 
         {/* LOADING */}
         {loading ? (
@@ -372,17 +360,15 @@ function ShopContent() {
                   {/* IMAGE */}
                   <div className="relative aspect-[3/4] w-full bg-stone-900 overflow-hidden">
 
-                    {product.badge && (
-                      <span
-                        className={`absolute top-4 left-4 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${
-                          product.inStock
-                            ? "bg-amber-500 text-stone-950"
-                            : "bg-stone-800 text-stone-400"
-                        }`}
-                      >
-                        {product.badge}
+                    {product.isOffer && product.discountPercent > 0 ? (
+                      <span className="absolute top-4 left-4 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-rose-600 text-white shadow-lg animate-in fade-in duration-300">
+                        -{product.discountPercent}% OFF
                       </span>
-                    )}
+                    ) : product.badge ? (
+                      <span className={`absolute top-4 left-4 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${
+                        product.inStock ? 'bg-amber-500 text-stone-950' : 'bg-stone-800 text-stone-400'
+                      }`}>{product.badge}</span>
+                    ) : null}
 
                     {product.image && (
                       <img
@@ -403,54 +389,69 @@ function ShopContent() {
                   </div>
 
                   {/* BODY */}
-                  <div className="p-5 flex flex-col gap-4">
+                 <div className="p-5 flex flex-col gap-4">
+  <div>
+    <p className="text-[10px] uppercase tracking-[0.25em] text-stone-500 mb-2">
+      {product.category}
+    </p>
 
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.25em] text-stone-500 mb-2">
-                        {product.category}
-                      </p>
+    <h2 className="text-sm uppercase tracking-wide font-semibold text-white line-clamp-2 min-h-[40px]">
+      {product.name}
+    </h2>
 
-                      <h2 className="text-sm uppercase tracking-wide font-semibold text-white line-clamp-2 min-h-[40px]">
-                        {product.name}
-                      </h2>
+    {/* 🎯 ফিক্সড: ট্রেন্ডি লাক্সারি প্রাইস স্ট্রাইক-থ্রু নোড */}
+    <div className="mt-3 flex items-baseline gap-2">
+      {product.isOffer && product.discountPercent > 0 ? (
+        <>
+          {/* অফার বিক্রয় মূল্য */}
+          <span className="text-lg font-light text-amber-400">
+            ৳{Number(product.salePrice).toLocaleString()}
+          </span>
+          {/* কাটা আসল মূল্য */}
+          <span className="text-xs text-stone-600 line-through tracking-wide">
+            ৳{Number(product.regularPrice).toLocaleString()}
+          </span>
+        </>
+      ) : (
+        /* সাধারণ রেগুলার প্রাইস */
+        <span className="text-lg font-light text-amber-400">
+          ৳{Number(product.regularPrice || product.price || 0).toLocaleString()}
+        </span>
+      )}
+    </div>
+  </div>
 
-                      <p className="mt-3 text-lg font-light text-amber-400">
-                        ৳{Number(product.price).toLocaleString()}
-                      </p>
-                    </div>
+  {/* BUTTON (আপনার অরিজিনাল ক্লাসনেম ও অ্যানিমেশন হুবহু অক্ষুণ্ন রাখা হলো) */}
+  {product.inStock ? (
+    <button
+      onClick={() => handleAddToCartWithFeedback(product)}
+      disabled={buttonState === "loading"}
+      className={`min-w-[85px] text-[11px] font-black tracking-wider uppercase px-4 py-2 rounded-md transition-all duration-300 flex items-center justify-center gap-1.5 h-8 ${
+        buttonState === "success"
+          ? "bg-amber-500 text-stone-950 scale-95 shadow-md shadow-amber-500/10"
+          : buttonState === "loading"
+          ? "bg-stone-800 text-stone-500 cursor-not-allowed"
+          : "bg-stone-800 text-amber-400 hover:bg-amber-500 hover:text-stone-950"
+      }`}
+    >
+      {buttonState === "success" ? (
+        <>✓ Added</>
+      ) : buttonState === "loading" ? (
+        <div className="w-3 h-3 border border-stone-500 border-t-transparent rounded-full animate-spin" />
+      ) : (
+        "Add +"
+      )}
+    </button>
+  ) : (
+    <button
+      disabled
+      className="bg-stone-900 text-stone-600 text-[11px] font-black tracking-wider uppercase px-4 py-2 rounded-md cursor-not-allowed h-8"
+    >
+      Sold Out
+    </button>
+  )}
+</div>
 
-                    {/* BUTTON */}
-                    {product.inStock ? (
-                      <button
-                        onClick={() =>
-                          handleAddToCartWithFeedback(product)
-                        }
-                        disabled={buttonState === "loading"}
-                        className={`min-w-[85px] text-[11px] font-black tracking-wider uppercase px-4 py-2 rounded-md transition-all duration-300 flex items-center justify-center gap-1.5 h-8 ${
-                          buttonState === "success"
-                            ? "bg-amber-500 text-stone-950 scale-95 shadow-md shadow-amber-500/10"
-                            : buttonState === "loading"
-                            ? "bg-stone-800 text-stone-500 cursor-not-allowed"
-                            : "bg-stone-800 text-amber-400 hover:bg-amber-500 hover:text-stone-950"
-                        }`}
-                      >
-                        {buttonState === "success" ? (
-                          <>✓ Added</>
-                        ) : buttonState === "loading" ? (
-                          <div className="w-3 h-3 border border-stone-500 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          "Add +"
-                        )}
-                      </button>
-                    ) : (
-                      <button
-                        disabled
-                        className="bg-stone-900 text-stone-600 text-[11px] font-black tracking-wider uppercase px-4 py-2 rounded-md cursor-not-allowed h-8"
-                      >
-                        Sold Out
-                      </button>
-                    )}
-                  </div>
                 </div>
               );
             })}

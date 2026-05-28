@@ -29,7 +29,8 @@ export default function ProductManager() {
 
   const initialFormData = {
     name: "",
-    price: "",
+   regularPrice: "", 
+  salePrice: "", 
     category: "three-piece",
     image: "",
     inStock: true,
@@ -40,6 +41,8 @@ export default function ProductManager() {
   };
 
   const [formData, setFormData] = useState(initialFormData);
+
+  
 
   // ☁️ Live Product Fetch
   useEffect(() => {
@@ -105,61 +108,135 @@ export default function ProductManager() {
       console.error("Cloudinary upload error:", error);
 
       showAlert(`Failed to upload image: ${error.message}`, "error");
-    } finally {
-      setUploadingImage(false);
-    }
-  };
+    // ১. handleImageFileChange যেখানে শেষ হয়েছে (লাইন ১২৬-১২৭)
+  } finally {
+    setUploadingImage(false);
+  }
+};
 
-  // ➕ Publish Product
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+// 🎯 ঠিক এখানে পুরানো handleSubmit মুছে নতুনটি বসিয়ে দিন:
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!formData.image.trim()) {
-      showAlert("Please upload a product media asset image first.", "error");
+  if (!formData.image?.trim()) {
+    showAlert("Please upload a product media asset image first.", "error");
+    return;
+  }
 
+  if (formData.isFeaturedBanner) {
+    const hasExistingBanner = products.some((p) => p.isFeaturedBanner);
+    if (hasExistingBanner) {
+      showAlert("⚠️ একটি Featured Banner অলরেডি সচল আছে! প্রথমে সেটি ক্লিয়ার করুন।", "error");
       return;
     }
+  }
 
-    if (formData.isFeaturedBanner) {
-      const hasExistingBanner = products.some((p) => p.isFeaturedBanner);
+  try {
+    setLoading(true);
 
-      if (hasExistingBanner) {
-        showAlert(
-          "⚠️ একটি Featured Banner অলরেডি সচল আছে! প্রথমে সেটি ক্লিয়ার করুন।",
-          "error",
-        );
+    const regPrice = Number(formData.regularPrice) || 0;
+    const sPrice = Number(formData.salePrice) || 0;
+    let calculatedDiscount = 0;
 
-        return;
-      }
+    if (formData.isOffer && sPrice > 0 && regPrice > sPrice) {
+      calculatedDiscount = Math.round(((regPrice - sPrice) / regPrice) * 100);
     }
 
-    try {
-      setLoading(true);
+    await addDoc(collection(db, "products"), {
+      name: formData.name,
+      regularPrice: regPrice,
+      salePrice: sPrice > 0 ? sPrice : regPrice, 
+      discountPercent: calculatedDiscount, 
+      category: formData.category,
+      image: formData.image,
+      inStock: formData.inStock,
+      badge: calculatedDiscount > 0 ? `-${calculatedDiscount}%` : formData.badge || "New", 
+      isNewArrival: formData.isNewArrival,
+      isFeaturedBanner: formData.isFeaturedBanner,
+      isOffer: calculatedDiscount > 0 ? true : formData.isOffer,
+      createdAt: new Date().toISOString(),
+    });
 
-      await addDoc(collection(db, "products"), {
-        name: formData.name,
-        price: Number(formData.price),
-        category: formData.category,
-        image: formData.image,
-        inStock: formData.inStock,
-        badge: formData.badge || "New",
-        isNewArrival: formData.isNewArrival,
-        isFeaturedBanner: formData.isFeaturedBanner,
-        isOffer: Boolean(formData.isOffer),
-        createdAt: new Date().toISOString(),
-      });
+    showAlert("🎉 Product Deployed and Published Successfully!", "success");
+    setFormData(initialFormData);
+  } catch (error) {
+    console.error(error);
+    showAlert(`Deployment Error: ${error.message}`, "error");
+  } finally {
+    setLoading(false);
+  }
+};
 
+
+// 🎯 ওপরে তৈরি করা handleSubmit যেখানে শেষ হয়েছে, তার ঠিক নিচে এটি বসিয়ে দিন:
+const handleUpdateSubmit = async (e) => {
+  e.preventDefault();
+
+  if (!formData.image) {
+    showAlert("Please upload a product asset image node first.", "error");
+    return;
+  }
+
+  if (formData.isFeaturedBanner) {
+    const hasExistingBanner = products.some(
+      (p) => p.isFeaturedBanner && p.id !== editingId,
+    );
+
+    if (hasExistingBanner) {
+      showAlert(
+        "⚠️ একটি Featured Banner অলরেডি সচল আছে! দয়া করে সেটি বন্ধ করে সাবমিট করুন।",
+        "error",
+      );
+      return;
+    }
+  }
+
+  try {
+    setLoading(true);
+
+    const regPrice = Number(formData.regularPrice) || 0;
+    const sPrice = Number(formData.salePrice) || 0;
+    let calculatedDiscount = 0;
+
+    if (formData.isOffer && sPrice > 0 && regPrice > sPrice) {
+      calculatedDiscount = Math.round(((regPrice - sPrice) / regPrice) * 100);
+    }
+
+    const productData = {
+      name: formData.name || "",
+      regularPrice: regPrice,
+      salePrice: sPrice > 0 ? sPrice : regPrice,
+      discountPercent: calculatedDiscount,
+      category: formData.category || "three-piece",
+      image: formData.image || "",
+      inStock: Boolean(formData.inStock),
+      badge: calculatedDiscount > 0 ? `-${calculatedDiscount}%` : formData.badge || "New",
+      isNewArrival: Boolean(formData.isNewArrival),
+      isFeaturedBanner: Boolean(formData.isFeaturedBanner),
+      isOffer: calculatedDiscount > 0 ? true : Boolean(formData.isOffer), 
+      createdAt: new Date().toISOString(),
+    };
+
+    if (editingId) {
+      await updateDoc(doc(db, "products", editingId), productData);
+      showAlert("🎉 Product Configuration Updated Successfully!", "success");
+      setEditingId(null); 
+    } else {
+      await addDoc(collection(db, "products"), productData);
       showAlert("🎉 Product Deployed and Published Successfully!", "success");
-
-      setFormData(initialFormData);
-    } catch (error) {
-      console.error(error);
-
-      showAlert(`Deployment Error: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
     }
-  };
+
+    setFormData(initialFormData);
+  } catch (error) {
+    console.error(error);
+    showAlert(`Deployment Error: ${error.message}`, "error");
+  } finally {
+    setLoading(false);
+  }
+};
+
+// এর ঠিক নিচে আপনার handleBulkExcelUpload ফাংশনটি আগের মতোই থাকবে...
+
 
   // 📊 Excel Upload
   const handleBulkExcelUpload = async (e) => {
@@ -303,13 +380,17 @@ export default function ProductManager() {
   };
 
   // ✏️ Edit Click
+   // ✏️ Edit Click
   const handleEditClick = (product) => {
     setEditingId(product.id);
+    
     setFormData({
-      name: product.name,
-      price: product.price,
-      category: product.category,
-      image: product.image,
+      name: product.name || "",
+      // 🎯 ফিক্সড: পুরানো ডেটায় ফিল্ড না থাকলেও ফলব্যাক ফাঁকা স্ট্রিং পাস হবে, ফলে ক্র্যাশ হবে না
+      regularPrice: product.regularPrice ?? product.price ?? "",
+      salePrice: product.salePrice ?? "",
+      category: product.category || "three-piece",
+      image: product.image || "",
       inStock: product.inStock ?? true,
       badge: product.badge || "",
       isNewArrival: product.isNewArrival ?? false,
@@ -317,11 +398,12 @@ export default function ProductManager() {
       isOffer: product.isOffer ?? false,
     });
 
-     window.scrollTo({
+    window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
   };
+
    // 👈 handleEditClick এখানে শেষ হয়েছে
 
   // 🎯 নতুন লজিক: টেবিল থেকে অফার সরাসরি অন/অফ করার ফাংশন
@@ -340,65 +422,68 @@ export default function ProductManager() {
   };
 
   // 🔄 Update Submit
-  const handleUpdateSubmit = async (e) => {
-    e.preventDefault();
+  // const handleUpdateSubmit = async (e) => {
+  //   e.preventDefault();
 
-    if (!formData.image) {
-      showAlert("Please upload a product asset image node first.", "error");
+  //   if (!formData.image) {
+  //     showAlert("Please upload a product asset image node first.", "error");
 
-      return;
-    }
+  //     return;
+  //   }
 
-    if (formData.isFeaturedBanner) {
-      const hasExistingBanner = products.some(
-        (p) => p.isFeaturedBanner && p.id !== editingId,
-      );
+  //   if (formData.isFeaturedBanner) {
+  //     const hasExistingBanner = products.some(
+  //       (p) => p.isFeaturedBanner && p.id !== editingId,
+  //     );
 
-      if (hasExistingBanner) {
-        showAlert(
-          "⚠️ একটি Featured Banner অলরেডি সচল আছে! দয়া করে সেটি বন্ধ করে সাবমিট করুন।",
-          "error",
-        );
+  //     if (hasExistingBanner) {
+  //       showAlert(
+  //         "⚠️ একটি Featured Banner অলরেডি সচল আছে! দয়া করে সেটি বন্ধ করে সাবমিট করুন।",
+  //         "error",
+  //       );
 
-        return;
-      }
-    }
+  //       return;
+  //     }
+  //   }
 
-    try {
-      setLoading(true);
+  //   try {
+  //     setLoading(true);
 
-      const productData = {
-        name: formData.name || "",
-        price: Number(formData.price) || 0,
-        category: formData.category || "three-piece",
-        image: formData.image || "",
-        inStock: Boolean(formData.inStock),
-        badge: formData.badge || "New",
-        isNewArrival: Boolean(formData.isNewArrival),
-        isFeaturedBanner: Boolean(formData.isFeaturedBanner),
-        isOffer: Boolean(formData.isOffer), // সেভ করার সময় সেফ বুলিয়ান কনভার্সন
-        createdAt: new Date().toISOString(),
-      };
+  //     const productData = {
+  //       name: formData.name || "",
+  //       price: Number(formData.price) || 0,
+  //       category: formData.category || "three-piece",
+  //       image: formData.image || "",
+  //       inStock: Boolean(formData.inStock),
+  //       badge: formData.badge || "New",
+  //       isNewArrival: Boolean(formData.isNewArrival),
+  //       isFeaturedBanner: Boolean(formData.isFeaturedBanner),
+  //       isOffer: Boolean(formData.isOffer), // সেভ করার সময় সেফ বুলিয়ান কনভার্সন
+  //       createdAt: new Date().toISOString(),
+  //     };
 
-      if (editingId) {
-        // 🎯 যদি এডিট মোড অন থাকে তবে আপডেট হবে
-        await updateDoc(doc(db, "products", editingId), productData);
-        showAlert("🎉 Product Configuration Updated Successfully!", "success");
-        setEditingId(null); // এডিট মোড ক্লিয়ার
-      } else {
-        // 🎯 না হলে নতুন প্রোডাক্ট হিসেবে অ্যাড হবে
-        await addDoc(collection(db, "products"), productData);
-        showAlert("🎉 Product Deployed and Published Successfully!", "success");
-      }
+  //     if (editingId) {
+  //       // 🎯 যদি এডিট মোড অন থাকে তবে আপডেট হবে
+  //       await updateDoc(doc(db, "products", editingId), productData);
+  //       showAlert("🎉 Product Configuration Updated Successfully!", "success");
+  //       setEditingId(null); // এডিট মোড ক্লিয়ার
+  //     } else {
+  //       // 🎯 না হলে নতুন প্রোডাক্ট হিসেবে অ্যাড হবে
+  //       await addDoc(collection(db, "products"), productData);
+  //       showAlert("🎉 Product Deployed and Published Successfully!", "success");
+  //     }
 
-      setFormData(initialFormData);
-    } catch (error) {
-      console.error(error);
-      showAlert(`Deployment Error: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     setFormData(initialFormData);
+  //   } catch (error) {
+  //     console.error(error);
+  //     showAlert(`Deployment Error: ${error.message}`, "error");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+
+  
 
   return (
     <div className="min-h-screen bg-[#060504] text-zinc-100 lg:pl-64 antialiased">
@@ -458,43 +543,33 @@ export default function ProductManager() {
               </div>
 
               {/* PRICE & CATEGORY */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs uppercase tracking-wider text-zinc-500 mb-2">
-                    Base Price (BDT)
-                  </label>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div>
+    <label className="block text-xs uppercase tracking-wider text-zinc-500 mb-2">Regular Price (Original BDT)</label>
+    <input
+      type="number"
+      name="regularPrice"
+       value={formData.regularPrice || ""}
+      onChange={handleInputChange}
+      required
+      placeholder="e.g., 2500"
+      className="w-full bg-[#12110F] border border-zinc-800 rounded p-3 text-zinc-200"
+    />
+  </div>
 
-                  <input
-                    type="number"
-                    name="price"
-                    value={formData.price}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full bg-[#12110F] border border-zinc-800 rounded p-3 text-zinc-200"
-                  />
-                </div>
+  <div>
+    <label className="block text-xs uppercase tracking-wider text-zinc-500 mb-2">Sale Price (Offer BDT - Optional)</label>
+    <input
+      type="number"
+      name="salePrice"
+      value={formData.salePrice || ""}
+      onChange={handleInputChange}
+      placeholder="Leave blank if no discount"
+      className="w-full bg-[#12110F] border border-zinc-800 rounded p-3 text-zinc-200"
+    />
+  </div>
+</div>
 
-                <div>
-                  <label className="block text-xs uppercase tracking-wider text-zinc-500 mb-2">
-                    Category Stack
-                  </label>
-
-                  <select
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                    className="w-full bg-[#12110F] border border-zinc-800 rounded p-3 text-zinc-200"
-                  >
-                    <option value="three-piece">Three-Piece</option>
-
-                    <option value="kurti">Kurti</option>
-
-                    <option value="saree">Saree</option>
-
-                    <option value="unstitched">Unstitched</option>
-                  </select>
-                </div>
-              </div>
 
               {/* BADGE */}
               <div>
@@ -638,7 +713,7 @@ export default function ProductManager() {
               Live Vault Registry Data ({products.length} Units Map)
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {products.length === 0 ? (
                 <div className="text-zinc-500 text-sm">
                   No core items recorded inside live asset registry node.
@@ -665,9 +740,11 @@ export default function ProductManager() {
                           SOLD OUT
                         </div>
                       )}
+                      
+                      {/* 🎯 ১. ট্রেন্ডি ডাইনামিক অফার ব্যাজ ট্রিগার */}
                       {product.isOffer && (
-                        <span className="text-[9px] bg-rose-950 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase ml-2 animate-pulse">
-                          🏷️ Offer Active
+                        <span className="text-[9px] bg-rose-950 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded-full uppercase ml-2 animate-pulse absolute top-2 left-2 z-10">
+                          {product.discountPercent > 0 ? `🏷️ -${product.discountPercent}% Off` : "🏷️ Sale Active"}
                         </span>
                       )}
                     </div>
@@ -695,9 +772,23 @@ export default function ProductManager() {
                         {product.name}
                       </h3>
 
-                      <p className="text-zinc-300">
-                        ৳{Number(product.price).toLocaleString()}
-                      </p>
+                      {/* 🎯 ২. লাক্সারি স্ট্রিকেট-থ্রু প্রাইস ডিস্ট্রিবিউশন */}
+                      <div className="text-zinc-300 text-sm flex items-center gap-2">
+                        {product.isOffer && product.discountPercent > 0 ? (
+                          <>
+                            <span className="text-zinc-100 font-bold">
+                              ৳{Number(product.salePrice).toLocaleString()}
+                            </span>
+                            <span className="text-xs text-zinc-600 line-through">
+                              ৳{Number(product.regularPrice).toLocaleString()}
+                            </span>
+                          </>
+                        ) : (
+                          <span>
+                            ৳{Number(product.regularPrice || product.price || 0).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2.5 mt-5">
@@ -735,7 +826,7 @@ export default function ProductManager() {
                           : "Set Hero"}
                       </button>
 
-                      {/* 🏷️ PRIVATE SALE SPECIAL OFFER TOGGLE */}
+                      {/* 🏷️ PRIVATE SALE SPECIAL OFFER TOGGLE (🎯 ৩. বাটন টেক্সট ডাইনামিক করা হলো) */}
                       <button
                         type="button"
                         onClick={() =>
@@ -750,7 +841,11 @@ export default function ProductManager() {
                             : "bg-[#12110F] text-stone-400 border-zinc-800/80 hover:border-rose-500/50 hover:text-rose-400"
                         }`}
                       >
-                        {product.isOffer ? "🏷️ Sale 40%" : "Reg Price"}
+                        {product.isOffer 
+                          ? product.discountPercent > 0 
+                            ? `🏷️ Sale ${product.discountPercent}%` 
+                            : "🏷️ Sale On"
+                          : "Reg Price"}
                       </button>
 
                       {/* ✏️ ASSET METRICS EDIT ACTION */}
@@ -786,6 +881,7 @@ export default function ProductManager() {
                 ))
               )}
             </div>
+
           </div>
         </div>
       </main>

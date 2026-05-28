@@ -3,8 +3,13 @@ import { AlertProvider } from "@/context/AlertContext"; // 🎯 নতুন য
 import "./globals.css"; // অথবা আপনার Tailwind CSS ইমপোর্ট লাইন
 
 export const metadata = {
-  title: "Ratri's Collection",
+  title: "Ratri's Collection — Luxury Couture & Beauty",
   description: "The Art of Pure Elegance",
+ icons: {
+    icon: "/favicon.png", 
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({ children }) {
