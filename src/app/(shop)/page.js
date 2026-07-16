@@ -5,6 +5,7 @@ import { useCart } from "@/context/CartContext";
 import { useState, useEffect } from "react";
 
 import { db } from "@/lib/firebase";
+import { getProductPrice, normalizeProductForCart } from "@/lib/productPricing";
 import {
   collection,
   query,
@@ -18,7 +19,6 @@ export default function Home() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 🎯 Dynamic Button Feedback State
   const [addingStates, setAddingStates] = useState({});
 
   useEffect(() => {
@@ -40,24 +40,21 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  // Featured Banner Product
   const bannerProduct =
     products.find((p) => p.isFeaturedBanner === true) ||
     products[0];
 
-  // Trending Products
   const trendingProducts = products
     .filter((p) => p.id !== bannerProduct?.id)
     .slice(0, 4);
 
-  // 🎯 Add To Cart Feedback Handler
   const handleAddToCartWithFeedback = (product) => {
     setAddingStates((prev) => ({
       ...prev,
       [product.id]: "loading",
     }));
 
-    addToCart(product);
+    addToCart(normalizeProductForCart(product));
 
     setTimeout(() => {
       setAddingStates((prev) => ({
@@ -74,7 +71,6 @@ export default function Home() {
     }, 800);
   };
 
-  // Loading State
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0B0A09] flex items-center justify-center">
@@ -85,13 +81,12 @@ export default function Home() {
     );
   }
 
-  // Banner Button State
   const bannerBtnState = addingStates[bannerProduct?.id];
 
   return (
     <div className="bg-[#0B0A09] min-h-screen text-stone-100 selection:bg-amber-600 selection:text-black">
 
-      {/* ⚡ HERO SECTION */}
+      {/* Hero section */}
       <section className="max-w-7xl mx-auto px-6 lg:px-8 pt-16 pb-20 md:pt-24 md:pb-28">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
 
@@ -186,7 +181,7 @@ export default function Home() {
               <div className="flex items-center justify-between pt-3 border-t border-stone-900">
 
                 <span className="text-lg font-black text-white">
-                  ৳{Number(bannerProduct?.price || 0).toLocaleString()}
+                  ৳{getProductPrice(bannerProduct).toLocaleString()}
                 </span>
 
                 <button
@@ -217,7 +212,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 🛍️ TRENDING PRODUCTS */}
+      {/* Trending products */}
       <section className="max-w-7xl mx-auto px-6 lg:px-8 pb-32">
 
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 border-b border-stone-900 pb-6">
@@ -240,7 +235,7 @@ export default function Home() {
           </Link>
         </div>
 
-        {/* PRODUCT GRID */}
+        {/* Product grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
 
           {trendingProducts.map((product) => {
@@ -252,7 +247,7 @@ export default function Home() {
                 className="group flex flex-col bg-[#12110F] border border-stone-900 rounded-xl overflow-hidden shadow-xl"
               >
 
-                {/* IMAGE */}
+                {/* Image */}
                 <div className="relative aspect-[3/4] w-full bg-stone-900 overflow-hidden">
 
                   {product.badge && (
@@ -285,7 +280,7 @@ export default function Home() {
                   )}
                 </div>
 
-                {/* PRODUCT INFO */}
+                {/* Product info */}
                 <div className="p-5 flex flex-col justify-between flex-1 space-y-4">
 
                   <div>
@@ -298,11 +293,11 @@ export default function Home() {
                     </h3>
                   </div>
 
-                  {/* PRICE + BUTTON */}
+                  {/* Price and button */}
                   <div className="flex items-center justify-between pt-4 border-t border-stone-900">
 
                     <span className="text-lg font-black text-white">
-                      ৳{Number(product.price).toLocaleString()}
+                      ৳{getProductPrice(product).toLocaleString()}
                     </span>
 
                     {product.inStock ? (

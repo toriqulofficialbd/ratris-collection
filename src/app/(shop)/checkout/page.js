@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { db } from "@/lib/firebase";
-import { collection, doc, setDoc } from "firebase/firestore"; // addDoc এর বদলে doc এবং setDoc ব্যবহার করা হলো
+import { collection, doc, setDoc } from "firebase/firestore";
 import { useCart } from "@/context/CartContext";
 
 function CheckoutComponent() {
@@ -23,7 +23,7 @@ function CheckoutComponent() {
     address: "",
   });
 
-   // 🎯 মডাল ওপেন থাকলে ব্যাকগ্রাউন্ড স্ক্রল লক করার মেকানিজম
+  // Lock background scrolling while the modal is open
   useEffect(() => {
     if (showSuccessModal) {
       document.body.style.overflow = "hidden";
@@ -31,13 +31,13 @@ function CheckoutComponent() {
       document.body.style.overflow = "unset";
     }
 
-    // কম্পোনেন্ট আনমাউন্ট বা পেজ চেঞ্জ হলে বডি নরমাল করার জন্য ক্লিনআপ
+    // Restore body scrolling when the component unmounts
     return () => {
       document.body.style.overflow = "unset";
     };
   }, [showSuccessModal]);
 
-  // কার্টের মোট টাকার ডাইনামিক রিয়েল-টাইম হিসাব
+  // Calculate the cart total dynamically
   const calculatedTotal = cart.reduce(
     (sum, item) => sum + Number(item.price) * (item.qty || 1),
     0,
@@ -60,27 +60,26 @@ function CheckoutComponent() {
     setLoading(true);
 
     try {
-      // 🎯 ১. ট্রেন্ডি ও এরর-মুক্ত ট্র্যাকিং আইডি জেনারেটর মেকানিজম (ফায়ারবেস সিকিউর মেথড)
-      // ফায়ারবেসের নিজস্ব ডক আইডি থেকে প্রথম ৬টি ক্যারেক্টার নিয়ে ইউনিক ট্র্যাকিং তৈরি করা হলো
+      // Create a short, unique tracking ID from the Firestore document id
       const orderRef = doc(collection(db, "orders"));
       const shortId = orderRef.id.slice(0, 6).toUpperCase();
-      const trackingId = `RC-${shortId}`; // আউটপুট এক্সাম্পল: RC-A49F3D
+      const trackingId = `RC-${shortId}`;
 
-      // ফায়ারবেসে ডেটা রাইট লেজার
+      // Save the order to Firestore
       await setDoc(orderRef, {
         trackingId: trackingId,
         customerName: customerData.name,
         phone: customerData.phone,
         address: customerData.address,
         items: cart.map((item) => ({
-          id: item.id || "unit_asset", // Math.random() এর বদলে ফিক্সড স্ট্রিং দিয়ে রিয়াক্ট বিশুদ্ধতা ঠিক করা হলো
+          id: item.id || "unit_asset",
           name: item.name,
           price: item.price,
           qty: item.qty || 1,
         })),
         total: `৳ ${calculatedTotal.toLocaleString()}`,
         status: "Pending",
-        createdAt: new Date().toISOString(), // নন-ইডেমপোটেন্ট ডেট মেথডকে সেফ স্ট্রিং করা হলো
+        createdAt: new Date().toISOString(),
       });
 
       setGeneratedTrackId(trackingId);

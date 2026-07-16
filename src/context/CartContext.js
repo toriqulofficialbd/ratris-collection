@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  // ১. ইনিশিয়াল স্টেটেই লোকাল স্টোরেজ চেক করার সেফ মেথড (যাতে ইফেক্টের ভেতর লুপ না হয়)
+ 
   const [cart, setCart] = useState(() => {
     if (typeof window !== "undefined") {
       const savedCart = localStorage.getItem("ratris_cart");
@@ -13,14 +13,14 @@ export function CartProvider({ children }) {
     return [];
   });
 
-  // ২. কার্টে আসলেই কোনো আইটেম চেঞ্জ হলে শুধুমাত্র তখনই লোকাল স্টোরেজে পুশ হবে
+ 
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("ratris_cart", JSON.stringify(cart));
     }
   }, [cart]);
 
-  // ৩. কার্টে প্রোডাক্ট যোগ করার ফাংশন
+  
   const addToCart = (product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
@@ -33,12 +33,12 @@ export function CartProvider({ children }) {
     });
   };
 
-  // ৪. কার্ট থেকে প্রোডাক্ট রিমুভ করার ফাংশন
+  // Remove a product from the cart
   const removeFromCart = (productId) => {
     setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
   };
 
-  // ৫. প্রোডাক্টের কোয়ান্টিটি বাড়ানোর/কমানোর ফাংশন
+  // Adjust item quantity
   const updateQuantity = (productId, amount) => {
     setCart((prevCart) =>
       prevCart.map((item) =>
@@ -49,7 +49,7 @@ export function CartProvider({ children }) {
     );
   };
 
-  // ৬. অর্ডার শেষে কার্ট খালি করার ফাংশন
+  // Clear the cart after checkout
   const clearCart = () => {
     setCart([]);
     if (typeof window !== "undefined") {

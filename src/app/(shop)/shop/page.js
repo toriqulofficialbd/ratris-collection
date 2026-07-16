@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 
 import { useCart } from "@/context/CartContext";
+import { normalizeProductForCart } from "@/lib/productPricing";
 
 function ShopContent() {
   const { addToCart } = useCart();
@@ -21,17 +22,16 @@ function ShopContent() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 🎯 Add To Cart Button State
   const [addingStates, setAddingStates] = useState({});
 
-  // GLOBAL SETTINGS
+  // Settings
   const [globalSettings, setGlobalSettings] = useState({
     enableSearch: true,
     enablePriceSorting: true,
     enableStockFilter: true,
   });
 
-  // FILTER STATES
+  // Filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("default");
   const [hideOutOfStock, setHideOutOfStock] = useState(false);
@@ -41,7 +41,7 @@ function ShopContent() {
   const currentCat = searchParams.get("cat");
   const currentFilter = searchParams.get("filter");
 
-  // LIVE SYNC
+  // Live sync
   useEffect(() => {
     // PRODUCTS
     const q = query(
@@ -75,20 +75,13 @@ function ShopContent() {
     };
   }, []);
 
-  // 🎯 Add To Cart Feedback
-   
   const handleAddToCartWithFeedback = (product) => {
     setAddingStates((prev) => ({
       ...prev,
       [product.id]: "loading",
     }));
 
-    // 🎯 নতুন পরিবর্তন: সঠিক ডিসকাউন্ট প্রাইস কার্ট অবজেক্টে পাস করা হলো
-    const activePrice = product.isOffer && product.discountPercent > 0 
-      ? product.salePrice 
-      : (product.regularPrice || product.price || 0);
-
-    addToCart({ ...product, price: activePrice });
+    addToCart(normalizeProductForCart(product));
 
     setTimeout(() => {
       setAddingStates((prev) => ({
@@ -106,10 +99,10 @@ function ShopContent() {
   };
 
 
-  // FILTER PROCESS
+  // Filter process
   let filteredProducts = [...products];
 
-  // CATEGORY FILTER
+  // Category filter
   if (currentCat) {
     filteredProducts = filteredProducts.filter(
       (product) =>
@@ -118,7 +111,7 @@ function ShopContent() {
     );
   }
 
-  // NEW FILTER
+  // New filter
   if (currentFilter === "new") {
     const hasNewBadge = filteredProducts.some(
       (p) =>
@@ -137,7 +130,7 @@ function ShopContent() {
     }
   }
 
-  // OFFER FILTER
+  // Offer filter
   if (currentFilter === "offer") {
     filteredProducts = filteredProducts.filter(
       (product) =>
@@ -147,7 +140,7 @@ function ShopContent() {
     );
   }
 
-  // SEARCH FILTER
+  // Search filter
   if (
     globalSettings.enableSearch &&
     searchQuery.trim() !== ""
@@ -163,7 +156,7 @@ function ShopContent() {
     );
   }
 
-  // STOCK FILTER
+  // Stock filter
   if (
     globalSettings.enableStockFilter &&
     hideOutOfStock
@@ -173,7 +166,6 @@ function ShopContent() {
     );
   }
 
-    // SORTING (লাইন ১৬১)
   if (globalSettings.enablePriceSorting) {
     if (sortBy === "price-low") {
       filteredProducts.sort((a, b) => {
@@ -191,7 +183,7 @@ function ShopContent() {
   }
 
 
-  // RESET FILTERS
+  // Reset filters
   const clearUrlFilters = () => {
     setSearchQuery("");
     setSortBy("default");
@@ -200,7 +192,7 @@ function ShopContent() {
     router.push("/shop");
   };
 
-  // SHOW TOOLBAR
+  // Show toolbar
   const showFilterToolbar =
     globalSettings.enableSearch ||
     globalSettings.enableStockFilter ||
@@ -210,7 +202,7 @@ function ShopContent() {
     <div className="bg-[#0B0A09] min-h-screen text-stone-100 selection:bg-amber-600 selection:text-black p-6 md:p-12">
       <div className="max-w-7xl mx-auto ">
 
-        {/* HEADER */}
+        {/* Header */}
         <header className="mb-10 border-b border-stone-900 pb-8">
           <span className="text-xs font-bold text-amber-500 uppercase tracking-widest">
             THE VAULT
@@ -231,11 +223,11 @@ function ShopContent() {
           </p>
         </header>
 
-        {/* FILTER TOOLBAR */}
+        {/* Filter toolbar */}
         {showFilterToolbar && (
           <div className="mb-12 bg-[#12110F] border border-stone-900 rounded-xl p-4 flex flex-col lg:flex-row gap-4 justify-between items-center shadow-xl">
 
-            {/* SEARCH */}
+            {/* Search */}
             {globalSettings.enableSearch ? (
               <div className="w-full lg:w-80 relative">
                 <input
@@ -264,10 +256,10 @@ function ShopContent() {
               <div className="hidden lg:block w-80" />
             )}
 
-            {/* RIGHT SIDE */}
+            {/* Right side */}
             <div className="w-full lg:w-auto flex flex-wrap items-center justify-between lg:justify-end gap-4">
 
-              {/* STOCK FILTER */}
+              {/* Stock filter */}
               {globalSettings.enableStockFilter && (
                 <label
                   className={`flex items-center gap-2.5 px-4 py-2.5 rounded-lg border text-[11px] uppercase tracking-wider font-bold cursor-pointer transition-all duration-300 ${
@@ -297,7 +289,7 @@ function ShopContent() {
                 </label>
               )}
 
-              {/* SORT DROPDOWN (🎯 সোর্টিং নোড) */}
+              {/* Sort dropdown */}
               {globalSettings.enablePriceSorting && (
                 <div className="relative w-full sm:w-auto">
                   <select
@@ -317,7 +309,7 @@ function ShopContent() {
                 </div>
               )}
 
-              {/* RESET TRIGGER BUTTON */}
+              {/* Reset trigger button */}
               {(currentCat || currentFilter || searchQuery || sortBy !== "default" || hideOutOfStock) && (
                 <button
                   onClick={clearUrlFilters}
@@ -331,7 +323,7 @@ function ShopContent() {
         )}
 
 
-        {/* LOADING */}
+        {/* Loading */}
         {loading ? (
           <div className="h-64 flex items-center justify-center">
             <p className="text-xs text-amber-500 uppercase tracking-[0.3em] animate-pulse">
@@ -345,7 +337,7 @@ function ShopContent() {
             </p>
           </div>
         ) : (
-          /* 💎 PRODUCT GRID */
+          /* Product grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {filteredProducts.map((product) => {
               const buttonState =
@@ -357,7 +349,7 @@ function ShopContent() {
                   className="group flex flex-col bg-[#12110F] border border-stone-900 rounded-xl overflow-hidden shadow-xl justify-between"
                 >
 
-                  {/* IMAGE */}
+                  {/* Image */}
                   <div className="relative aspect-[3/4] w-full bg-stone-900 overflow-hidden">
 
                     {product.isOffer && product.discountPercent > 0 ? (
@@ -388,7 +380,7 @@ function ShopContent() {
                     )}
                   </div>
 
-                  {/* BODY */}
+                  {/* Body */}
                  <div className="p-5 flex flex-col gap-4">
   <div>
     <p className="text-[10px] uppercase tracking-[0.25em] text-stone-500 mb-2">
@@ -399,21 +391,21 @@ function ShopContent() {
       {product.name}
     </h2>
 
-    {/* 🎯 ফিক্সড: ট্রেন্ডি লাক্সারি প্রাইস স্ট্রাইক-থ্রু নোড */}
+   
     <div className="mt-3 flex items-baseline gap-2">
       {product.isOffer && product.discountPercent > 0 ? (
         <>
-          {/* অফার বিক্রয় মূল্য */}
+          
           <span className="text-lg font-light text-amber-400">
             ৳{Number(product.salePrice).toLocaleString()}
           </span>
-          {/* কাটা আসল মূল্য */}
+          
           <span className="text-xs text-stone-600 line-through tracking-wide">
             ৳{Number(product.regularPrice).toLocaleString()}
           </span>
         </>
       ) : (
-        /* সাধারণ রেগুলার প্রাইস */
+        
         <span className="text-lg font-light text-amber-400">
           ৳{Number(product.regularPrice || product.price || 0).toLocaleString()}
         </span>
@@ -421,7 +413,7 @@ function ShopContent() {
     </div>
   </div>
 
-  {/* BUTTON (আপনার অরিজিনাল ক্লাসনেম ও অ্যানিমেশন হুবহু অক্ষুণ্ন রাখা হলো) */}
+  
   {product.inStock ? (
     <button
       onClick={() => handleAddToCartWithFeedback(product)}

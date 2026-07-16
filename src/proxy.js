@@ -1,4 +1,3 @@
-// src/proxy.js (Next.js 16+ অফিশিয়াল নিউ কনভেনশন)
 import { NextResponse } from "next/server";
 
 export function proxy(request) {

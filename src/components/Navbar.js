@@ -10,7 +10,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // নোটিশ বারের লাইভ ডাটা
+  
   const [announcement, setAnnouncement] = useState({
     text: "✨ FREE SHIPPING ON ORDERS OVER ৳২০০০ | USE CODE: RATRI10",
     show: true,
@@ -22,7 +22,7 @@ export default function Navbar() {
   const currentFilter = searchParams.get("filter");
   const { cart } = useCart();
 
-  // 🎯 মোবাইল মেনু অন থাকলে স্ক্রল বন্ধ রাখার লজিক
+  // Mobile menu logic
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -30,7 +30,7 @@ export default function Navbar() {
       document.body.style.overflow = "unset";
     }
 
-    // কম্পোনেন্ট আনমাউন্ট হলে যেন বডি নরমাল থাকে
+    
     return () => {
       document.body.style.overflow = "unset";
     };
@@ -44,7 +44,7 @@ export default function Navbar() {
     return () => clearTimeout(handleRouteChange);
   }, [pathname, searchParams]);
 
-  // 🎯 হাইড্রেশন ফিক্স এবং ফায়ারবেস নোটিশ লাইভ সিঙ্ক
+  
   useEffect(() => {
     const timer = setTimeout(() => {
       setMounted(true);
@@ -298,7 +298,7 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* 🎯 নতুন যুক্ত: আউটসাইড ক্লিক লেয়ার (মেনু খোলা থাকলে ব্যাকগ্রাউন্ডে ক্লিক করলে মেনু অফ হবে) */}
+      {/* Click-away overlay for the mobile menu */}
       {isOpen && (
         <div
           onClick={() => setIsOpen(false)}

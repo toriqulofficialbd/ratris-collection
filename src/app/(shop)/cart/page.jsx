@@ -1,14 +1,14 @@
-"use client"; // কার্টের আইটেম রিয়েল-টাইমে বাড়ানো/কমানোর জন্য Client Component করলাম
+"use client"; 
 
 import Link from 'next/link';
 import Image from 'next/image';
-import dynamic from 'next/dynamic'; // 🎯 নতুন ট্রেন্ডি হাইড্রেশন ফিক্স
-import { useCart } from '@/context/CartContext'; // গ্লোবাল কার্ট ডাটা ইমপোর্ট করলাম
+import dynamic from 'next/dynamic'; 
+import { useCart } from '@/context/CartContext'; 
 
-function CartPageContent() {
+export function CartPageContent() {
   const { cart, updateQuantity, removeFromCart } = useCart();
 
-  // কার্টের সব প্রোডাক্টের মোট মূল্য হিসাব করার লজিক
+ 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
   return (
@@ -20,7 +20,7 @@ function CartPageContent() {
         </h1>
 
         {cart.length === 0 ? (
-          /* 🛍️ কার্ট খালি থাকলে এই প্রিমিয়াম মেসেজটি দেখাবে */
+          
           <div className="text-center py-24 bg-[#12110F] rounded-2xl border border-stone-900/60 space-y-6">
             <svg className="w-16 h-16 text-stone-600 mx-auto animate-pulse" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
@@ -31,7 +31,7 @@ function CartPageContent() {
             </Link>
           </div>
         ) : (
-          /* 🛍️ কার্টে আইটেম থাকলে এই ডাইনামিক গ্রিডটি ওপেন হবে */
+          
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
             {/* LEFT: LIVE CART ITEMS LIST */}
@@ -61,6 +61,7 @@ function CartPageContent() {
                   <div className="text-right flex flex-col justify-between h-20 items-end">
                     <button 
                       onClick={() => removeFromCart(item.id)} 
+                      aria-label="Remove item"
                       className="text-stone-500 hover:text-red-400 transition-colors p-1"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -108,7 +109,7 @@ function CartPageContent() {
   );
 }
 
-// 🎯 ৩. মেইন সেফ গেটওয়ে এক্সপোর্ট: এটি ক্লায়েন্ট সাইড রেন্ডার নিশ্চিত করবে এবং Cascading Render এরর পুরোপুরি ফিক্স করবে।
+
 export default dynamic(() => Promise.resolve(CartPageContent), {
   ssr: false,
   loading: () => (

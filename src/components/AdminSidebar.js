@@ -9,24 +9,24 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
-  // 🎯 নতুন যুক্ত: মেনু আইটেম লিস্টে Vault Settings অ্যাড করা হলো
+  // Admin navigation items
   const menuItems = [
     { name: "Analytics Dashboard", path: "/admin" },
     { name: "Product Manager", path: "/admin/products" },
     { name: "Order Tracking", path: "/admin/orders" },
-    { name: "Vault Settings", path: "/admin/settings" }, // 🔐 ডাইনামিক পাসওয়ার্ড চেঞ্জ করার লিংক
+    { name: "Vault Settings", path: "/admin/settings" },
     { name: "Back to Shop", path: "/" },
   ];
 
   const handleSignOut = () => {
-    // কুকি সেশন ডিলিট করার ট্রেন্ডি মেকানিজম
+    // Clear the admin session cookie
     document.cookie = "ratri_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     window.location.href = "/";
   };
 
   return (
     <>
-      {/* Mobile Top Navbar (শুধু মোবাইল ও ট্যাবলেটে দেখাবে) */}
+      {/* Mobile top navbar */}
       <div className="lg:hidden w-full bg-[#0B0A09] border-b border-[#1C1A17] p-4 fixed top-0 left-0 z-50 flex justify-between items-center">
         <div>
           <h2 className="text-[10px] uppercase tracking-[0.2em] text-[#C5A880] font-light">Ratri&apos;s Suite</h2>
@@ -39,7 +39,7 @@ export default function AdminSidebar() {
         </button>
       </div>
 
-      {/* Main Sidebar (মোবাইলে ড্রয়ার হিসেবে আসবে, ডেক্সটপে ফিক্সড থাকবে) */}
+      {/* Main sidebar */}
       <aside className={`w-64 h-screen fixed left-0 top-0 bg-[#0B0A09] border-r border-[#1C1A17] flex flex-col justify-between p-6 z-50 transition-transform duration-300 lg:translate-x-0 ${
         isOpen ? "translate-x-0" : "-translate-x-full"
       }`}>
@@ -88,7 +88,7 @@ export default function AdminSidebar() {
             </div>
           </div>
           
-          {/* স্লিক লাক্সারি সাইন আউট বাটন */}
+          {/* Sign out button */}
           <button 
             onClick={handleSignOut}
             className="w-full bg-[#12110F] hover:bg-rose-950/20 text-zinc-500 hover:text-rose-400 border border-[#1C1A17] text-[10px] uppercase tracking-widest py-2 rounded transition-all duration-300"

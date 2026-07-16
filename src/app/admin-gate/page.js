@@ -4,12 +4,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore"; // 🎯 নতুন যুক্ত: ফায়ারবেস থেকে ডাইনামিক কী রিড করার জন্য
+import { doc, getDoc } from "firebase/firestore"; 
 
 export default function AdminGate() {
   const [accessKey, setAccessKey] = useState("");
   const [error, setError] = useState(false);
-  const [verifying, setVerifying] = useState(false); // 🎯 নতুন যুক্ত: ভেরিফিকেশন লোডিং স্টেট
+  const [verifying, setVerifying] = useState(false); 
   const router = useRouter();
 
   const handleGateOpen = async (e) => {
@@ -18,24 +18,20 @@ export default function AdminGate() {
     setError(false);
 
     try {
-      // 🎯 ফিক্স: ফায়ারবেসের settings কালেকশনের admin_config ডকুমেন্ট থেকে লেটেস্ট পাসওয়ার্ড নিয়ে আসা
+     
       const docRef = doc(db, "settings", "admin_config");
       const docSnap = await getDoc(docRef);
 
-      let correctKey = "Ratri123"; // ব্যাকআপ ডিফল্ট কী (যদি ফায়ারবেসে এখনো ডাটা সেট না করা হয়ে থাকে)
+      let correctKey = "Ratri123";
 
       if (docSnap.exists()) {
-        correctKey = docSnap.data().accessKey; // ড্যাশবোর্ড থেকে চেঞ্জ করা ডাইনামিক পাসওয়ার্ড
+        correctKey = docSnap.data().accessKey; 
       }
 
-      // ইনপুট দেওয়া পাসওয়ার্ডের সাথে ফায়ারবেসের পাসওয়ার্ড মেলানো হচ্ছে
+      // matching Logic
       if (accessKey === correctKey) {
         setError(false);
-        
-        // ব্রাউজারে একটি ১ দিনের সিকিউর কুকি সেট করা হচ্ছে ট্রেন্ডি উপায়ে
         document.cookie = "ratri_admin_session=authenticated_luxury_session; path=/; max-age=86400; SameSite=Strict";
-        
-        // সফলভাবে লগইন হলে ড্যাশবোর্ডে পুশ করবে
         router.push("/admin");
       } else {
         setError(true);

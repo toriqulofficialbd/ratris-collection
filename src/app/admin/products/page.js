@@ -108,13 +108,13 @@ export default function ProductManager() {
       console.error("Cloudinary upload error:", error);
 
       showAlert(`Failed to upload image: ${error.message}`, "error");
-    // ১. handleImageFileChange যেখানে শেষ হয়েছে (লাইন ১২৬-১২৭)
+    // Finish image upload handling
   } finally {
     setUploadingImage(false);
   }
 };
 
-// 🎯 ঠিক এখানে পুরানো handleSubmit মুছে নতুনটি বসিয়ে দিন:
+// Handle product submission
 const handleSubmit = async (e) => {
   e.preventDefault();
 
@@ -126,7 +126,7 @@ const handleSubmit = async (e) => {
   if (formData.isFeaturedBanner) {
     const hasExistingBanner = products.some((p) => p.isFeaturedBanner);
     if (hasExistingBanner) {
-      showAlert("⚠️ একটি Featured Banner অলরেডি সচল আছে! প্রথমে সেটি ক্লিয়ার করুন।", "error");
+      showAlert("⚠️ A featured banner already exists. Remove it first.", "error");
       return;
     }
   }
@@ -168,7 +168,7 @@ const handleSubmit = async (e) => {
 };
 
 
-// 🎯 ওপরে তৈরি করা handleSubmit যেখানে শেষ হয়েছে, তার ঠিক নিচে এটি বসিয়ে দিন:
+// Handle product updates
 const handleUpdateSubmit = async (e) => {
   e.preventDefault();
 
@@ -184,7 +184,7 @@ const handleUpdateSubmit = async (e) => {
 
     if (hasExistingBanner) {
       showAlert(
-        "⚠️ একটি Featured Banner অলরেডি সচল আছে! দয়া করে সেটি বন্ধ করে সাবমিট করুন।",
+        "⚠️ A featured banner already exists. Turn it off before submitting.",
         "error",
       );
       return;
@@ -235,7 +235,7 @@ const handleUpdateSubmit = async (e) => {
   }
 };
 
-// এর ঠিক নিচে আপনার handleBulkExcelUpload ফাংশনটি আগের মতোই থাকবে...
+// Continue with bulk Excel upload handling
 
 
   // 📊 Excel Upload
@@ -355,7 +355,7 @@ const handleUpdateSubmit = async (e) => {
 
       if (hasExistingBanner) {
         showAlert(
-          "⚠️ একটি Featured Banner অলরেডি সচল আছে! প্রথমে সেটি রিমুভ করুন।",
+          "⚠️ A featured banner already exists. Remove it first.",
           "error",
         );
 
@@ -386,7 +386,7 @@ const handleUpdateSubmit = async (e) => {
     
     setFormData({
       name: product.name || "",
-      // 🎯 ফিক্সড: পুরানো ডেটায় ফিল্ড না থাকলেও ফলব্যাক ফাঁকা স্ট্রিং পাস হবে, ফলে ক্র্যাশ হবে না
+      // Provide a safe fallback so older records do not crash the form
       regularPrice: product.regularPrice ?? product.price ?? "",
       salePrice: product.salePrice ?? "",
       category: product.category || "three-piece",
@@ -404,9 +404,9 @@ const handleUpdateSubmit = async (e) => {
     });
   };
 
-   // 👈 handleEditClick এখানে শেষ হয়েছে
+  // Finish edit handling
 
-  // 🎯 নতুন লজিক: টেবিল থেকে অফার সরাসরি অন/অফ করার ফাংশন
+  // Toggle offer status directly from the table
   const toggleOfferStatus = async (productId, currentStatus) => {
     try {
       await updateDoc(doc(db, "products", productId), {
@@ -420,68 +420,6 @@ const handleUpdateSubmit = async (e) => {
       showAlert("Failed to sync offer metrics to database ledger.", "error");
     }
   };
-
-  // 🔄 Update Submit
-  // const handleUpdateSubmit = async (e) => {
-  //   e.preventDefault();
-
-  //   if (!formData.image) {
-  //     showAlert("Please upload a product asset image node first.", "error");
-
-  //     return;
-  //   }
-
-  //   if (formData.isFeaturedBanner) {
-  //     const hasExistingBanner = products.some(
-  //       (p) => p.isFeaturedBanner && p.id !== editingId,
-  //     );
-
-  //     if (hasExistingBanner) {
-  //       showAlert(
-  //         "⚠️ একটি Featured Banner অলরেডি সচল আছে! দয়া করে সেটি বন্ধ করে সাবমিট করুন।",
-  //         "error",
-  //       );
-
-  //       return;
-  //     }
-  //   }
-
-  //   try {
-  //     setLoading(true);
-
-  //     const productData = {
-  //       name: formData.name || "",
-  //       price: Number(formData.price) || 0,
-  //       category: formData.category || "three-piece",
-  //       image: formData.image || "",
-  //       inStock: Boolean(formData.inStock),
-  //       badge: formData.badge || "New",
-  //       isNewArrival: Boolean(formData.isNewArrival),
-  //       isFeaturedBanner: Boolean(formData.isFeaturedBanner),
-  //       isOffer: Boolean(formData.isOffer), // সেভ করার সময় সেফ বুলিয়ান কনভার্সন
-  //       createdAt: new Date().toISOString(),
-  //     };
-
-  //     if (editingId) {
-  //       // 🎯 যদি এডিট মোড অন থাকে তবে আপডেট হবে
-  //       await updateDoc(doc(db, "products", editingId), productData);
-  //       showAlert("🎉 Product Configuration Updated Successfully!", "success");
-  //       setEditingId(null); // এডিট মোড ক্লিয়ার
-  //     } else {
-  //       // 🎯 না হলে নতুন প্রোডাক্ট হিসেবে অ্যাড হবে
-  //       await addDoc(collection(db, "products"), productData);
-  //       showAlert("🎉 Product Deployed and Published Successfully!", "success");
-  //     }
-
-  //     setFormData(initialFormData);
-  //   } catch (error) {
-  //     console.error(error);
-  //     showAlert(`Deployment Error: ${error.message}`, "error");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
 
   
 
@@ -741,7 +679,7 @@ const handleUpdateSubmit = async (e) => {
                         </div>
                       )}
                       
-                      {/* 🎯 ১. ট্রেন্ডি ডাইনামিক অফার ব্যাজ ট্রিগার */}
+                      {/* Offer badge trigger */}
                       {product.isOffer && (
                         <span className="text-[9px] bg-rose-950 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded-full uppercase ml-2 animate-pulse absolute top-2 left-2 z-10">
                           {product.discountPercent > 0 ? `🏷️ -${product.discountPercent}% Off` : "🏷️ Sale Active"}
@@ -772,7 +710,7 @@ const handleUpdateSubmit = async (e) => {
                         {product.name}
                       </h3>
 
-                      {/* 🎯 ২. লাক্সারি স্ট্রিকেট-থ্রু প্রাইস ডিস্ট্রিবিউশন */}
+                      {/* Price display for offers */}
                       <div className="text-zinc-300 text-sm flex items-center gap-2">
                         {product.isOffer && product.discountPercent > 0 ? (
                           <>
@@ -826,7 +764,7 @@ const handleUpdateSubmit = async (e) => {
                           : "Set Hero"}
                       </button>
 
-                      {/* 🏷️ PRIVATE SALE SPECIAL OFFER TOGGLE (🎯 ৩. বাটন টেক্সট ডাইনামিক করা হলো) */}
+                      {/* Offer toggle button */}
                       <button
                         type="button"
                         onClick={() =>
