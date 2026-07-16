@@ -4,7 +4,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore"; 
+import { doc, getDoc } from "firebase/firestore";
+import { resolveAdminAccessKey, isValidAdminAccessKey } from "@/lib/adminAccess";
 
 export default function AdminGate() {
   const [accessKey, setAccessKey] = useState("");
@@ -19,17 +20,12 @@ export default function AdminGate() {
 
     try {
      
-      const docRef = doc(db, "settings", "admin_config");
-      const docSnap = await getDoc(docRef);
+      const correctKey = await resolveAdminAccessKey(async () => {
+        const docRef = doc(db, "settings", "admin_config");
+        return getDoc(docRef);
+      });
 
-      let correctKey = "Ratri123";
-
-      if (docSnap.exists()) {
-        correctKey = docSnap.data().accessKey; 
-      }
-
-      // matching Logic
-      if (accessKey === correctKey) {
+      if (correctKey && isValidAdminAccessKey(accessKey, correctKey)) {
         setError(false);
         document.cookie = "ratri_admin_session=authenticated_luxury_session; path=/; max-age=86400; SameSite=Strict";
         router.push("/admin");
